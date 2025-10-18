@@ -5,23 +5,23 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import Slider from '@react-native-community/slider';
 import { audiobookStorage } from '../../services/storage';
-import type { Audiobook, Subtitle } from '../../types/audiobook';
+import type { Audiobook, SubtitleParagraph } from '../../types/audiobook';
+import { SubtitleParagraphList } from '../../components/SubtitleParagraphList';
 
 export default function PlayerScreen() {
   const params = useLocalSearchParams();
   const audiobookId = params.id as string;
 
   const [audiobook, setAudiobook] = useState<Audiobook | null>(null);
-  const [currentSubtitle, setCurrentSubtitle] = useState<string>('');
-  const [previousSubtitles, setPreviousSubtitles] = useState<string[]>([]);
+  const [currentParagraphIndex, setCurrentParagraphIndex] = useState<number>(-1);
   const [isPlaying, setIsPlaying] = useState(false);
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const sound = useRef<Audio.Sound | null>(null);
-  const subtitlesRef = useRef<Subtitle[]>([]);
-  const lastSubtitleIndex = useRef<number>(-1);
+  const paragraphsRef = useRef<SubtitleParagraph[]>([]);
+  const lastParagraphIndex = useRef<number>(-1);
 
   // Load audiobook data
   useEffect(() => {
@@ -43,9 +43,8 @@ export default function PlayerScreen() {
 
       setAudiobook(book);
 
-      if (book.subtitles) {
-        subtitlesRef.current = book.subtitles; // Fix closure issue
-
+      if (book.paragraphs) {
+        paragraphsRef.current = book.paragraphs;
       }
 
       await loadAudio(book);
@@ -87,86 +86,62 @@ export default function PlayerScreen() {
       setDuration(status.durationMillis / 1000);
       setIsPlaying(status.isPlaying);
 
-      // Update current subtitle
       const currentTime = status.positionMillis / 1000;
+      const paragraphs = paragraphsRef.current;
 
-      // Use ref to avoid closure issues
-      const currentSubtitles = subtitlesRef.current;
-
-      if (currentSubtitles.length === 0) {
-        setCurrentSubtitle('');
-        setPreviousSubtitles([]);
+      if (paragraphs.length === 0) {
+        setCurrentParagraphIndex(-1);
         return;
       }
 
-      // Optimized subtitle search using cached index + linear scan
-      // Strategy: find the LAST subtitle that has already started (highest index where start <= currentTime)
       let currentIndex = -1;
-      const cachedIdx = lastSubtitleIndex.current;
+      const cachedIdx = lastParagraphIndex.current;
 
-      // First check the cached subtitle and nearby ones (common case: O(1))
-      if (cachedIdx >= 0 && cachedIdx < currentSubtitles.length) {
-        // Check if next subtitle has started (most common: playing forward)
-        if (cachedIdx + 1 < currentSubtitles.length &&
-            currentTime >= currentSubtitles[cachedIdx + 1].start) {
+      if (cachedIdx >= 0 && cachedIdx < paragraphs.length) {
+        if (cachedIdx + 1 < paragraphs.length &&
+            currentTime >= paragraphs[cachedIdx + 1].startTime) {
           currentIndex = cachedIdx + 1;
         }
-        // Check if cached subtitle is still active
-        else if (currentTime >= currentSubtitles[cachedIdx].start) {
+        else if (currentTime >= paragraphs[cachedIdx].startTime) {
           currentIndex = cachedIdx;
         }
-        // Check if we went back to previous subtitle
         else if (cachedIdx > 0 &&
-                 currentTime >= currentSubtitles[cachedIdx - 1].start) {
+                 currentTime >= paragraphs[cachedIdx - 1].startTime) {
           currentIndex = cachedIdx - 1;
         }
       }
 
-      // If not found nearby, use binary search to find last started subtitle
-      // Goal: find highest index where subtitle.start <= currentTime
-      if (currentIndex === -1) {
-        let left = 0;
-        let right = currentSubtitles.length - 1;
-        let bestMatch = -1;
+      if (currentIndex === -1 && paragraphs.length > 0) {
+        const lastParagraph = paragraphs[paragraphs.length - 1];
+        const totalDuration = lastParagraph.endTime;
 
-        while (left <= right) {
-          const mid = Math.floor((left + right) / 2);
-          const sub = currentSubtitles[mid];
+        if (totalDuration > 0) {
+          const ratio = currentTime / totalDuration;
+          const estimatedIndex = Math.min(
+            paragraphs.length - 1,
+            Math.max(0, Math.floor(ratio * paragraphs.length))
+          );
 
-          if (sub.start <= currentTime) {
-            // This subtitle has started, it's a candidate
-            bestMatch = mid;
-            // But check if there's a later one that also started
-            left = mid + 1;
+          if (paragraphs[estimatedIndex].startTime <= currentTime) {
+            currentIndex = estimatedIndex;
+            for (let i = estimatedIndex + 1; i < paragraphs.length; i++) {
+              if (paragraphs[i].startTime > currentTime) break;
+              currentIndex = i;
+            }
           } else {
-            // This subtitle hasn't started yet, go left
-            right = mid - 1;
+            for (let i = estimatedIndex - 1; i >= 0; i--) {
+              if (paragraphs[i].startTime <= currentTime) {
+                currentIndex = i;
+                break;
+              }
+            }
           }
         }
-
-        currentIndex = bestMatch;
       }
 
-      // Update cache for next iteration
-      lastSubtitleIndex.current = currentIndex;
+      lastParagraphIndex.current = currentIndex;
+      setCurrentParagraphIndex(currentIndex);
 
-      // Get current + previous subtitles for context
-      if (currentIndex !== -1) {
-        const current = currentSubtitles[currentIndex];
-        setCurrentSubtitle(current.text);
-
-        // Get previous 12-14 subtitles to fill the window
-        const startIndex = Math.max(0, currentIndex - 12);
-        const previous = currentSubtitles
-          .slice(startIndex, currentIndex)
-          .map(sub => sub.text);
-        setPreviousSubtitles(previous);
-      } else {
-        setCurrentSubtitle('');
-        setPreviousSubtitles([]);
-      }
-
-      // Save position every 5 seconds
       if (status.isPlaying && Math.floor(currentTime) % 5 === 0) {
         savePosition(currentTime);
       }
@@ -193,8 +168,7 @@ export default function PlayerScreen() {
     if (!sound.current) return;
     await sound.current.setPositionAsync(value * 1000);
     setPosition(value);
-    // Reset cached subtitle index on seek to trigger binary search
-    lastSubtitleIndex.current = -1;
+    lastParagraphIndex.current = -1;
   };
 
   const formatTime = (seconds: number) => {
@@ -229,23 +203,22 @@ export default function PlayerScreen() {
         }}
       />
       <View className="flex-1 bg-gray-100">
-        {/* Subtitles - full height */}
-        <View className="flex-1 mx-4 mt-4 mb-3 bg-white rounded-xl px-4 py-3 justify-end overflow-hidden">
-          {/* Previous subtitles - dimmed, for context */}
-          {previousSubtitles.map((text, index) => (
-            <Text
-              key={index}
-              className="text-base text-gray-500 text-center leading-6 mb-1"
-            >
-              {text}
+        {audiobook.paragraphs && audiobook.paragraphs.length > 0 ? (
+          <View className="flex-1 mt-4 mb-3">
+            <SubtitleParagraphList
+              paragraphs={audiobook.paragraphs}
+              currentParagraphIndex={currentParagraphIndex}
+              currentTime={position}
+              onSeek={seekTo}
+            />
+          </View>
+        ) : (
+          <View className="flex-1 mx-4 mt-4 mb-3 bg-white rounded-xl px-4 py-3 justify-center items-center">
+            <Text className="text-gray-500 text-center">
+              No subtitles available
             </Text>
-          ))}
-
-          {/* Current subtitle - highlighted */}
-          <Text className="text-xl font-semibold text-gray-900 text-center leading-7 mt-1">
-            {currentSubtitle || 'No subtitles at this moment...'}
-          </Text>
-        </View>
+          </View>
+        )}
 
         {/* Progress Bar */}
         <View className="px-6 mb-3">

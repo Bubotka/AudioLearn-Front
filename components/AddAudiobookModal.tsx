@@ -14,6 +14,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import type { Audiobook } from '../types/audiobook';
 import { youtubeService } from '../services/youtube';
+import { groupSubtitlesIntoParagraphs } from '../utils/subtitleGrouping';
 
 interface AddAudiobookModalProps {
   visible: boolean;
@@ -75,10 +76,16 @@ export function AddAudiobookModal({ visible, onClose, onAdd }: AddAudiobookModal
 
       // Fetch subtitles once and store them
       let subtitles;
+      let paragraphs;
       try {
         console.log('fetching subtitles for:', youtubeUrl);
         subtitles = await youtubeService.getSubtitles(youtubeUrl);
         console.log('subtitles loaded:', subtitles?.length || 0, 'entries');
+
+        if (subtitles && subtitles.length > 0) {
+          paragraphs = groupSubtitlesIntoParagraphs(subtitles);
+          console.log('grouped into paragraphs:', paragraphs.length);
+        }
       } catch (error) {
         console.warn('failed to fetch subtitles, continuing without them:', error);
         subtitles = undefined;
@@ -94,7 +101,7 @@ export function AddAudiobookModal({ visible, onClose, onAdd }: AddAudiobookModal
         author: metadata.author,
         audioPath: audioFile.uri,
         audioUrl: metadata.audioUrl,
-        subtitles,
+        paragraphs,
         status: 'ready',
         progress: 100,
         addedAt: Date.now(),

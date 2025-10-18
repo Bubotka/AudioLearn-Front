@@ -6,6 +6,14 @@ export interface Subtitle {
   text: string;
 }
 
+export interface SubtitleParagraph {
+  id: string;
+  startTime: number;
+  endTime: number;
+  text: string;
+  subtitles: Subtitle[];
+}
+
 export interface Audiobook {
   id: string;
   youtubeUrl: string;
@@ -21,6 +29,7 @@ export interface Audiobook {
   audioUrl?: string; // direct YouTube audio URL (valid for ~6 hours)
   subtitlesPath?: string; // local subtitles path
   subtitles?: Subtitle[]; // stored subtitles from YouTube
+  paragraphs?: SubtitleParagraph[];
   currentPosition?: number; // playback position in seconds
   lastPosition?: number; // last saved playback position in seconds
   author?: string; // video author/channel
