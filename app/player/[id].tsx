@@ -4,15 +4,14 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import Slider from '@react-native-community/slider';
-import { audiobookStorage } from '../services/storage';
-import type { Audiobook, Subtitle } from '../types/audiobook';
+import { audiobookStorage } from '../../services/storage';
+import type { Audiobook, Subtitle } from '../../types/audiobook';
 
 export default function PlayerScreen() {
   const params = useLocalSearchParams();
   const audiobookId = params.id as string;
 
   const [audiobook, setAudiobook] = useState<Audiobook | null>(null);
-  const [subtitles, setSubtitles] = useState<Subtitle[]>([]);
   const [currentSubtitle, setCurrentSubtitle] = useState<string>('');
   const [previousSubtitles, setPreviousSubtitles] = useState<string[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -49,21 +48,9 @@ export default function PlayerScreen() {
 
       setAudiobook(book);
 
-      console.log('=== AUDIOBOOK DEBUG ===');
-      console.log('Book ID:', book.id);
-      console.log('Has subtitles?', !!book.subtitles);
-      console.log('Subtitles count:', book.subtitles?.length || 0);
-      if (book.subtitles && book.subtitles.length > 0) {
-        console.log('First subtitle:', book.subtitles[0]);
-        console.log('Last subtitle:', book.subtitles[book.subtitles.length - 1]);
-      }
-
       if (book.subtitles) {
-        setSubtitles(book.subtitles);
         subtitlesRef.current = book.subtitles; // Fix closure issue
-        console.log('Subtitles SET to state');
-      } else {
-        console.log('NO SUBTITLES - book.subtitles is', book.subtitles);
+
       }
 
       await loadAudio(book);

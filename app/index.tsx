@@ -12,7 +12,7 @@ export default function HomeScreen() {
   const [showAddModal, setShowAddModal] = useState(false);
 
   const handleCardPress = (id: string) => {
-    router.push(`/player?id=${id}`);
+    router.push(`/player/${id}`);
   };
 
   const handleDelete = (id: string, title: string) => {
