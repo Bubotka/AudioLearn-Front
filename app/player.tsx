@@ -14,7 +14,7 @@ export default function PlayerScreen() {
   const [audiobook, setAudiobook] = useState<Audiobook | null>(null);
   const [subtitles, setSubtitles] = useState<Subtitle[]>([]);
   const [currentSubtitle, setCurrentSubtitle] = useState<string>('');
-  const [upcomingSubtitles, setUpcomingSubtitles] = useState<string[]>([]);
+  const [previousSubtitles, setPreviousSubtitles] = useState<string[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -108,43 +108,32 @@ export default function PlayerScreen() {
       // Update current subtitle
       const currentTime = status.positionMillis / 1000;
 
-      // Subtitle offset: positive = show earlier, negative = show later
-      const subtitleOffset = 2;
-      const adjustedTime = currentTime + subtitleOffset;
-
       // Use ref to avoid closure issues
       const currentSubtitles = subtitlesRef.current;
 
-      // Debug every second
-      if (status.isPlaying && Math.floor(currentTime) % 1 === 0 && currentTime < 5) {
-        console.log('Time:', currentTime.toFixed(2), 'Adjusted:', adjustedTime.toFixed(2), 'Subtitles array length:', currentSubtitles.length);
+      // Find current subtitle - use the LAST started subtitle (for overlapping subs)
+      let currentIndex = -1;
+      for (let i = currentSubtitles.length - 1; i >= 0; i--) {
+        if (currentTime >= currentSubtitles[i].start && currentTime < currentSubtitles[i].end) {
+          currentIndex = i;
+          break;
+        }
       }
 
-      // Find current subtitle index
-      let currentIndex = currentSubtitles.findIndex(
-        (sub) => adjustedTime >= sub.start && adjustedTime <= sub.end
-      );
-
-      // Lookahead: if no exact match, find next subtitle
-      if (currentIndex === -1) {
-        currentIndex = currentSubtitles.findIndex(
-          (sub) => sub.start > adjustedTime && sub.start - adjustedTime < 0.5
-        );
-      }
-
-      // Get current + next 3-4 subtitles to fill the window
+      // Get current + previous subtitles for context
       if (currentIndex !== -1) {
         const current = currentSubtitles[currentIndex];
         setCurrentSubtitle(current.text);
 
-        // Get next 3-4 subtitles
-        const upcoming = currentSubtitles
-          .slice(currentIndex + 1, currentIndex + 5)
+        // Get previous 7-8 subtitles for context
+        const startIndex = Math.max(0, currentIndex - 8);
+        const previous = currentSubtitles
+          .slice(startIndex, currentIndex)
           .map(sub => sub.text);
-        setUpcomingSubtitles(upcoming);
+        setPreviousSubtitles(previous);
       } else {
         setCurrentSubtitle('');
-        setUpcomingSubtitles([]);
+        setPreviousSubtitles([]);
       }
 
       // Save position every 5 seconds
@@ -228,21 +217,21 @@ export default function PlayerScreen() {
         </View>
 
         {/* Subtitles */}
-        <View className="mx-4 mb-3 bg-white rounded-xl p-8" style={{ minHeight: 320 }}>
-          {/* Current subtitle - highlighted */}
-          <Text className="text-2xl font-semibold text-gray-900 text-center leading-9 mb-3">
-            {currentSubtitle || 'No subtitles at this moment...'}
-          </Text>
-
-          {/* Upcoming subtitles - dimmed */}
-          {upcomingSubtitles.map((text, index) => (
+        <View className="mx-4 mb-3 bg-white rounded-xl px-4 py-5" style={{ height: 320 }}>
+          {/* Previous subtitles - dimmed, for context */}
+          {previousSubtitles.map((text, index) => (
             <Text
               key={index}
-              className="text-xl text-gray-600 text-center leading-8 mt-2"
+              className="text-lg text-gray-600 text-center leading-6 mb-1"
             >
               {text}
             </Text>
           ))}
+
+          {/* Current subtitle - highlighted */}
+          <Text className="text-xl font-semibold text-gray-900 text-center leading-7 mt-2">
+            {currentSubtitle || 'No subtitles at this moment...'}
+          </Text>
         </View>
 
         {/* Progress Bar */}
