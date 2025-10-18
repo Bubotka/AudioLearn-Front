@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, Image, ScrollView, ActivityIndicator } from 'react-native';
-import { useLocalSearchParams, router } from 'expo-router';
+import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { useLocalSearchParams, router, Stack } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import Slider from '@react-native-community/slider';
@@ -205,9 +205,12 @@ export default function PlayerScreen() {
 
   if (loading) {
     return (
-      <View className="flex-1 bg-gray-100 items-center justify-center">
-        <ActivityIndicator size="large" color="#3B82F6" />
-      </View>
+      <>
+        <Stack.Screen options={{ title: 'Loading...' }} />
+        <View className="flex-1 bg-gray-100 items-center justify-center">
+          <ActivityIndicator size="large" color="#3B82F6" />
+        </View>
+      </>
     );
   }
 
@@ -216,52 +219,30 @@ export default function PlayerScreen() {
   }
 
   return (
-    <View className="flex-1 bg-gray-100">
-      <ScrollView className="flex-1">
-        {/* Thumbnail */}
-        <View className="items-center mt-2 mb-3">
-          {audiobook.thumbnail ? (
-            <Image
-              source={{ uri: audiobook.thumbnail }}
-              style={{ width: 200, height: 200 }}
-              className="rounded-2xl"
-            />
-          ) : (
-            <View
-              style={{ width: 200, height: 200 }}
-              className="bg-blue-500 rounded-2xl items-center justify-center"
-            >
-              <MaterialIcons name="audiotrack" size={80} color="white" />
-            </View>
-          )}
-        </View>
-
-        {/* Title & Author */}
-        <View className="px-6 mb-2">
-          <Text className="text-lg font-bold text-gray-900 text-center" numberOfLines={1}>
-            {audiobook.title}
-          </Text>
-          {audiobook.author && (
-            <Text className="text-xs text-gray-600 text-center mt-1">
-              {audiobook.author}
-            </Text>
-          )}
-        </View>
-
-        {/* Subtitles */}
-        <View className="mx-4 mb-3 bg-white rounded-xl px-3 py-2 justify-end overflow-hidden" style={{ height: 320 }}>
+    <>
+      <Stack.Screen
+        options={{
+          title: audiobook.title,
+          headerTitleStyle: {
+            fontSize: 16,
+          },
+        }}
+      />
+      <View className="flex-1 bg-gray-100">
+        {/* Subtitles - full height */}
+        <View className="flex-1 mx-4 mt-4 mb-3 bg-white rounded-xl px-4 py-3 justify-end overflow-hidden">
           {/* Previous subtitles - dimmed, for context */}
           {previousSubtitles.map((text, index) => (
             <Text
               key={index}
-              className="text-lg text-gray-600 text-center leading-6 mb-0.5"
+              className="text-base text-gray-500 text-center leading-6 mb-1"
             >
               {text}
             </Text>
           ))}
 
           {/* Current subtitle - highlighted */}
-          <Text className="text-xl font-semibold text-gray-900 text-center leading-6 mt-0.5">
+          <Text className="text-xl font-semibold text-gray-900 text-center leading-7 mt-1">
             {currentSubtitle || 'No subtitles at this moment...'}
           </Text>
         </View>
@@ -311,7 +292,7 @@ export default function PlayerScreen() {
             <MaterialIcons name="forward-10" size={32} color="#1F2937" />
           </TouchableOpacity>
         </View>
-      </ScrollView>
-    </View>
+      </View>
+    </>
   );
 }
