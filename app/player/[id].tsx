@@ -21,6 +21,7 @@ export default function PlayerScreen() {
 
   const sound = useRef<Audio.Sound | null>(null);
   const subtitlesRef = useRef<Subtitle[]>([]);
+  const lastSubtitleIndex = useRef<number>(-1);
 
   // Load audiobook data
   useEffect(() => {
@@ -92,14 +93,62 @@ export default function PlayerScreen() {
       // Use ref to avoid closure issues
       const currentSubtitles = subtitlesRef.current;
 
-      // Find current subtitle - use the LAST started subtitle (for overlapping subs)
+      if (currentSubtitles.length === 0) {
+        setCurrentSubtitle('');
+        setPreviousSubtitles([]);
+        return;
+      }
+
+      // Optimized subtitle search using cached index + linear scan
+      // Strategy: find the LAST subtitle that has already started (highest index where start <= currentTime)
       let currentIndex = -1;
-      for (let i = currentSubtitles.length - 1; i >= 0; i--) {
-        if (currentTime >= currentSubtitles[i].start && currentTime < currentSubtitles[i].end) {
-          currentIndex = i;
-          break;
+      const cachedIdx = lastSubtitleIndex.current;
+
+      // First check the cached subtitle and nearby ones (common case: O(1))
+      if (cachedIdx >= 0 && cachedIdx < currentSubtitles.length) {
+        // Check if next subtitle has started (most common: playing forward)
+        if (cachedIdx + 1 < currentSubtitles.length &&
+            currentTime >= currentSubtitles[cachedIdx + 1].start) {
+          currentIndex = cachedIdx + 1;
+        }
+        // Check if cached subtitle is still active
+        else if (currentTime >= currentSubtitles[cachedIdx].start) {
+          currentIndex = cachedIdx;
+        }
+        // Check if we went back to previous subtitle
+        else if (cachedIdx > 0 &&
+                 currentTime >= currentSubtitles[cachedIdx - 1].start) {
+          currentIndex = cachedIdx - 1;
         }
       }
+
+      // If not found nearby, use binary search to find last started subtitle
+      // Goal: find highest index where subtitle.start <= currentTime
+      if (currentIndex === -1) {
+        let left = 0;
+        let right = currentSubtitles.length - 1;
+        let bestMatch = -1;
+
+        while (left <= right) {
+          const mid = Math.floor((left + right) / 2);
+          const sub = currentSubtitles[mid];
+
+          if (sub.start <= currentTime) {
+            // This subtitle has started, it's a candidate
+            bestMatch = mid;
+            // But check if there's a later one that also started
+            left = mid + 1;
+          } else {
+            // This subtitle hasn't started yet, go left
+            right = mid - 1;
+          }
+        }
+
+        currentIndex = bestMatch;
+      }
+
+      // Update cache for next iteration
+      lastSubtitleIndex.current = currentIndex;
 
       // Get current + previous subtitles for context
       if (currentIndex !== -1) {
@@ -144,6 +193,8 @@ export default function PlayerScreen() {
     if (!sound.current) return;
     await sound.current.setPositionAsync(value * 1000);
     setPosition(value);
+    // Reset cached subtitle index on seek to trigger binary search
+    lastSubtitleIndex.current = -1;
   };
 
   const formatTime = (seconds: number) => {
