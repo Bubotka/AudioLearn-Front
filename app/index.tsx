@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, Alert } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { useAudiobooks } from '../hooks/useAudiobooks';
 import { AudiobookCard } from '../components/AudiobookCard';
 import { AddAudiobookModal } from '../components/AddAudiobookModal';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function HomeScreen() {
-  const { audiobooks, loading, addAudiobook, deleteAudiobook } = useAudiobooks();
+  const { audiobooks, loading, addAudiobook, deleteAudiobook, refresh } = useAudiobooks();
   const [showAddModal, setShowAddModal] = useState(false);
 
   const handleCardPress = (id: string) => {
-    // TODO: navigate to player
-    console.log('open audiobook:', id);
+    router.push(`/player?id=${id}`);
   };
 
   const handleDelete = (id: string, title: string) => {
@@ -35,6 +36,29 @@ export default function HomeScreen() {
     );
   };
 
+  const handleClearAll = () => {
+    Alert.alert(
+      'Clear All Data',
+      'This will delete all audiobooks. Are you sure?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear All',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await AsyncStorage.clear();
+              await refresh();
+              Alert.alert('Success', 'All data cleared!');
+            } catch (error) {
+              Alert.alert('Error', 'Failed to clear data');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const renderEmpty = () => (
     <View className="flex-1 items-center justify-center p-8">
       <MaterialIcons name="library-music" size={64} color="#C7C7CC" />
@@ -49,6 +73,25 @@ export default function HomeScreen() {
 
   return (
     <View className="flex-1 bg-gray-100">
+      {/* Header */}
+      <View className="bg-white pt-12 pb-4 px-6 flex-row items-center justify-between shadow-sm">
+        <View>
+          <Text className="text-2xl font-bold text-gray-900">My Audiobooks</Text>
+          <Text className="text-sm text-gray-500 mt-0.5">
+            {audiobooks.length} {audiobooks.length === 1 ? 'book' : 'books'}
+          </Text>
+        </View>
+        {audiobooks.length > 0 && (
+          <TouchableOpacity
+            onPress={handleClearAll}
+            className="bg-red-50 p-3 rounded-full"
+            activeOpacity={0.7}
+          >
+            <MaterialIcons name="delete-sweep" size={24} color="#FF3B30" />
+          </TouchableOpacity>
+        )}
+      </View>
+
       <FlatList
         data={audiobooks}
         keyExtractor={(item) => item.id}

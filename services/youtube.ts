@@ -1,17 +1,40 @@
-import ytdl from 'react-native-ytdl';
-import * as FileSystem from 'expo-file-system/legacy';
-import type { YouTubeMetadata, DownloadProgress } from '../types/audiobook';
+import type { YouTubeMetadata, Subtitle } from '../types/audiobook';
+import { API_CONFIG, API_ENDPOINTS } from '../config/api';
+
+interface BackendMetadataResponse {
+  title: string;
+  thumbnail: string;
+  duration: number;
+  author: string;
+  audioUrl: string;
+}
 
 export const youtubeService = {
   async getMetadata(youtubeUrl: string): Promise<YouTubeMetadata> {
     try {
-      const info = await ytdl.getInfo(youtubeUrl);
+      const response = await fetch(
+        `${API_CONFIG.baseUrl}${API_ENDPOINTS.youtube.metadata}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ url: youtubeUrl }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`backend request failed: ${response.status}`);
+      }
+
+      const data: BackendMetadataResponse = await response.json();
 
       return {
-        title: info.videoDetails.title || 'Unknown',
-        thumbnail: info.videoDetails.thumbnails?.[0]?.url || '',
-        duration: parseInt(info.videoDetails.lengthSeconds || '0'),
-        author: info.videoDetails.author.name || 'Unknown',
+        title: data.title || 'Unknown',
+        thumbnail: data.thumbnail || '',
+        duration: data.duration || 0,
+        author: data.author || 'Unknown',
+        audioUrl: data.audioUrl,
       };
     } catch (error) {
       console.error('failed to get youtube metadata:', error);
@@ -19,61 +42,28 @@ export const youtubeService = {
     }
   },
 
-  async getAudioUrl(youtubeUrl: string): Promise<string> {
+  async getSubtitles(youtubeUrl: string): Promise<Subtitle[]> {
     try {
-      const urls = await ytdl(youtubeUrl, {
-        quality: 'highestaudio',
-        filter: 'audioonly',
-      });
-
-      if (!urls || urls.length === 0) {
-        throw new Error('no audio URL found');
-      }
-
-      return urls[0].url;
-    } catch (error) {
-      console.error('failed to get audio URL:', error);
-      throw new Error('failed to get audio download link', { cause: error });
-    }
-  },
-
-  async downloadAudio(
-    audioUrl: string,
-    audiobookId: string,
-    onProgress?: (progress: DownloadProgress) => void
-  ): Promise<string> {
-    try {
-      const fileName = `${audiobookId}.mp3`;
-      const fileUri = FileSystem.documentDirectory + fileName;
-
-      const downloadResumable = FileSystem.createDownloadResumable(
-        audioUrl,
-        fileUri,
-        {},
-        (downloadProgress) => {
-          if (onProgress) {
-            const progress: DownloadProgress = {
-              totalBytes: downloadProgress.totalBytesExpectedToWrite,
-              bytesWritten: downloadProgress.totalBytesWritten,
-              progress:
-                downloadProgress.totalBytesWritten /
-                downloadProgress.totalBytesExpectedToWrite,
-            };
-            onProgress(progress);
-          }
+      const response = await fetch(
+        `${API_CONFIG.baseUrl}${API_ENDPOINTS.youtube.subtitles}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ url: youtubeUrl }),
         }
       );
 
-      const result = await downloadResumable.downloadAsync();
-
-      if (!result) {
-        throw new Error('download failed');
+      if (!response.ok) {
+        throw new Error(`backend request failed: ${response.status}`);
       }
 
-      return result.uri;
+      const data: Subtitle[] = await response.json();
+      return data;
     } catch (error) {
-      console.error('failed to download audio:', error);
-      throw new Error('failed to download audio file', { cause: error });
+      console.error('failed to get youtube subtitles:', error);
+      throw new Error('failed to fetch subtitles', { cause: error });
     }
   },
 };

@@ -11,9 +11,9 @@ import {
   Platform,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { youtubeService } from '../services/youtube';
-import { startDownload } from '../services/downloadManager';
+import * as DocumentPicker from 'expo-document-picker';
 import type { Audiobook } from '../types/audiobook';
+import { youtubeService } from '../services/youtube';
 
 interface AddAudiobookModalProps {
   visible: boolean;
@@ -23,6 +23,7 @@ interface AddAudiobookModalProps {
 
 export function AddAudiobookModal({ visible, onClose, onAdd }: AddAudiobookModalProps) {
   const [youtubeUrl, setYoutubeUrl] = useState('');
+  const [audioFile, setAudioFile] = useState<{ uri: string; name: string } | null>(null);
   const [loading, setLoading] = useState(false);
 
   const isValidYoutubeUrl = (url: string): boolean => {
@@ -30,9 +31,34 @@ export function AddAudiobookModal({ visible, onClose, onAdd }: AddAudiobookModal
     return pattern.test(url);
   };
 
+  const handlePickAudio = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: 'audio/*',
+        copyToCacheDirectory: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const file = result.assets[0];
+        setAudioFile({
+          uri: file.uri,
+          name: file.name,
+        });
+      }
+    } catch (error) {
+      console.error('error picking audio:', error);
+      Alert.alert('Error', 'Failed to pick audio file');
+    }
+  };
+
   const handleAdd = async () => {
+    if (!audioFile) {
+      Alert.alert('Error', 'Please select an MP3 file');
+      return;
+    }
+
     if (!youtubeUrl.trim()) {
-      Alert.alert('Error', 'Please enter a YouTube URL');
+      Alert.alert('Error', 'Please enter a YouTube URL for subtitles');
       return;
     }
 
@@ -44,29 +70,42 @@ export function AddAudiobookModal({ visible, onClose, onAdd }: AddAudiobookModal
     setLoading(true);
 
     try {
-      // Get YouTube metadata
+      // Fetch metadata from YouTube using service layer
       const metadata = await youtubeService.getMetadata(youtubeUrl);
 
-      // Create audiobook object
+      // Fetch subtitles once and store them
+      let subtitles;
+      try {
+        console.log('fetching subtitles for:', youtubeUrl);
+        subtitles = await youtubeService.getSubtitles(youtubeUrl);
+        console.log('subtitles loaded:', subtitles?.length || 0, 'entries');
+      } catch (error) {
+        console.warn('failed to fetch subtitles, continuing without them:', error);
+        subtitles = undefined;
+      }
+
+      // Create audiobook object with metadata and subtitles
       const newAudiobook: Audiobook = {
         id: Date.now().toString(),
         youtubeUrl,
-        title: metadata.title,
+        title: metadata.title || audioFile.name.replace(/\.[^/.]+$/, ''),
         thumbnail: metadata.thumbnail,
         duration: metadata.duration,
-        status: 'downloading',
-        progress: 0,
+        author: metadata.author,
+        audioPath: audioFile.uri,
+        audioUrl: metadata.audioUrl,
+        subtitles,
+        status: 'ready',
+        progress: 100,
         addedAt: Date.now(),
       };
 
       // Add to storage
       await onAdd(newAudiobook);
 
-      // Start download in background (will be implemented)
-      startDownload(newAudiobook);
-
-      // Close modal
+      // Reset and close
       setYoutubeUrl('');
+      setAudioFile(null);
       onClose();
     } catch (error) {
       console.error('failed to add audiobook:', error);
@@ -76,10 +115,10 @@ export function AddAudiobookModal({ visible, onClose, onAdd }: AddAudiobookModal
     }
   };
 
-
   const handleClose = () => {
     if (!loading) {
       setYoutubeUrl('');
+      setAudioFile(null);
       onClose();
     }
   };
@@ -116,11 +155,36 @@ export function AddAudiobookModal({ visible, onClose, onAdd }: AddAudiobookModal
             </View>
 
             <Text className="text-sm text-gray-600 mb-3">
-              Paste a YouTube video URL to add it to your library
+              Step 1: Upload MP3 file
+            </Text>
+
+            <TouchableOpacity
+              className="bg-gray-100 p-4 rounded-lg mb-4 flex-row items-center justify-between"
+              onPress={handlePickAudio}
+              disabled={loading}
+            >
+              <View className="flex-row items-center flex-1">
+                <MaterialIcons
+                  name={audioFile ? "check-circle" : "audiotrack"}
+                  size={24}
+                  color={audioFile ? "#10B981" : "#6B7280"}
+                />
+                <Text
+                  className={`ml-3 text-base flex-1 ${audioFile ? 'text-gray-900' : 'text-gray-500'}`}
+                  numberOfLines={1}
+                >
+                  {audioFile ? audioFile.name : 'Select MP3 file...'}
+                </Text>
+              </View>
+              <MaterialIcons name="folder-open" size={24} color="#3B82F6" />
+            </TouchableOpacity>
+
+            <Text className="text-sm text-gray-600 mb-3">
+              Step 2: YouTube URL (for subtitles)
             </Text>
 
             <TextInput
-              className="bg-gray-100 p-4 rounded-lg text-base mb-4"
+              className="bg-gray-100 p-4 rounded-lg text-base mb-6"
               placeholder="https://youtube.com/watch?v=..."
               value={youtubeUrl}
               onChangeText={setYoutubeUrl}
@@ -132,10 +196,10 @@ export function AddAudiobookModal({ visible, onClose, onAdd }: AddAudiobookModal
 
             <TouchableOpacity
               className={`p-4 rounded-lg items-center flex-row justify-center ${
-                loading ? 'bg-gray-400' : 'bg-blue-500'
+                loading || !audioFile || !youtubeUrl ? 'bg-gray-400' : 'bg-blue-500'
               }`}
               onPress={handleAdd}
-              disabled={loading}
+              disabled={loading || !audioFile || !youtubeUrl}
             >
               {loading ? (
                 <>
