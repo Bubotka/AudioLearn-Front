@@ -125,8 +125,8 @@ export default function PlayerScreen() {
         const current = currentSubtitles[currentIndex];
         setCurrentSubtitle(current.text);
 
-        // Get previous 7-8 subtitles for context
-        const startIndex = Math.max(0, currentIndex - 8);
+        // Get previous 12-14 subtitles to fill the window
+        const startIndex = Math.max(0, currentIndex - 12);
         const previous = currentSubtitles
           .slice(startIndex, currentIndex)
           .map(sub => sub.text);
@@ -217,19 +217,19 @@ export default function PlayerScreen() {
         </View>
 
         {/* Subtitles */}
-        <View className="mx-4 mb-3 bg-white rounded-xl px-4 py-5" style={{ height: 320 }}>
+        <View className="mx-4 mb-3 bg-white rounded-xl px-3 py-2 justify-end overflow-hidden" style={{ height: 320 }}>
           {/* Previous subtitles - dimmed, for context */}
           {previousSubtitles.map((text, index) => (
             <Text
               key={index}
-              className="text-lg text-gray-600 text-center leading-6 mb-1"
+              className="text-lg text-gray-600 text-center leading-6 mb-0.5"
             >
               {text}
             </Text>
           ))}
 
           {/* Current subtitle - highlighted */}
-          <Text className="text-xl font-semibold text-gray-900 text-center leading-7 mt-2">
+          <Text className="text-xl font-semibold text-gray-900 text-center leading-6 mt-0.5">
             {currentSubtitle || 'No subtitles at this moment...'}
           </Text>
         </View>
