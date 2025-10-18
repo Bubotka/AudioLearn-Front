@@ -20,19 +20,13 @@ export default function PlayerScreen() {
   const [loading, setLoading] = useState(true);
 
   const sound = useRef<Audio.Sound | null>(null);
-  const positionUpdateInterval = useRef<NodeJS.Timeout | null>(null);
   const subtitlesRef = useRef<Subtitle[]>([]);
 
   // Load audiobook data
   useEffect(() => {
     loadAudiobook();
     return () => {
-      if (sound.current) {
-        sound.current.unloadAsync();
-      }
-      if (positionUpdateInterval.current) {
-        clearInterval(positionUpdateInterval.current);
-      }
+        sound.current?.unloadAsync();
     };
   }, [audiobookId]);
 
