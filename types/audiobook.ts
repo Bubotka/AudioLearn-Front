@@ -11,6 +11,7 @@ export interface SubtitleParagraph {
   startTime: number;
   endTime: number;
   text: string;
+  translatedText?: string;
   subtitles: Subtitle[];
 }
 

@@ -11,4 +11,7 @@ export const API_ENDPOINTS = {
     audioUrl: '/youtube/audio-url',
     subtitles: '/youtube/subtitles',
   },
+  translation: {
+    translate: '/translate',
+  },
 } as const;

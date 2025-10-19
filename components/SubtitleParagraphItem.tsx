@@ -1,13 +1,15 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import type { SubtitleParagraph } from '../types/audiobook';
+import { translationService } from '../services/translation';
 
 interface SubtitleParagraphItemProps {
   paragraph: SubtitleParagraph;
   isActive: boolean;
   currentTime?: number;
   onPlay: (startTime: number) => void;
+  onTranslate?: (paragraphId: string, translatedText: string) => void;
 }
 
 function formatTime(seconds: number): string {
@@ -21,8 +23,35 @@ export function SubtitleParagraphItem({
   isActive,
   currentTime,
   onPlay,
+  onTranslate,
 }: SubtitleParagraphItemProps) {
   const lastSubIndex = React.useRef<number>(-1);
+  const [showTranslation, setShowTranslation] = React.useState(false);
+  const [isTranslating, setIsTranslating] = React.useState(false);
+
+  const handleTranslateParagraph = async () => {
+    if (paragraph.translatedText) {
+      setShowTranslation(!showTranslation);
+      return;
+    }
+
+    setIsTranslating(true);
+    try {
+      const translatedText = await translationService.translateText(
+        paragraph.text,
+        'RU',
+        'EN'
+      );
+
+      onTranslate?.(paragraph.id, translatedText);
+      setShowTranslation(true);
+    } catch (error) {
+      console.error('translation error:', error);
+      Alert.alert('Ошибка', 'Не удалось перевести текст');
+    } finally {
+      setIsTranslating(false);
+    }
+  };
 
   const renderText = () => {
     if (!isActive || !currentTime || !paragraph.subtitles) {
@@ -103,6 +132,40 @@ export function SubtitleParagraphItem({
           {formatTime(paragraph.startTime)}
         </Text>
         {renderText()}
+
+        {showTranslation && paragraph.translatedText && (
+          <Text className="text-base text-gray-600 mt-2 italic leading-6">
+            {paragraph.translatedText}
+          </Text>
+        )}
+
+        <TouchableOpacity
+          onPress={handleTranslateParagraph}
+          disabled={isTranslating}
+          className="flex-row items-center mt-2"
+        >
+          {isTranslating ? (
+            <>
+              <ActivityIndicator size="small" color="#3B82F6" />
+              <Text className="text-blue-500 text-sm ml-2">
+                Перевод...
+              </Text>
+            </>
+          ) : (
+            <>
+              <MaterialIcons
+                name="translate"
+                size={16}
+                color="#3B82F6"
+              />
+              <Text className="text-blue-500 text-sm ml-1">
+                {paragraph.translatedText
+                  ? (showTranslation ? 'Скрыть перевод' : 'Показать перевод')
+                  : 'Перевести абзац'}
+              </Text>
+            </>
+          )}
+        </TouchableOpacity>
       </View>
     </View>
   );

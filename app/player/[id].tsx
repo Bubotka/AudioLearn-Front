@@ -177,6 +177,24 @@ export default function PlayerScreen() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const handleParagraphTranslate = async (paragraphId: string, translatedText: string) => {
+    if (!audiobook || !audiobook.paragraphs) return;
+
+    const updatedParagraphs = audiobook.paragraphs.map((p) =>
+      p.id === paragraphId ? { ...p, translatedText } : p
+    );
+
+    const updatedAudiobook = {
+      ...audiobook,
+      paragraphs: updatedParagraphs,
+    };
+
+    setAudiobook(updatedAudiobook);
+    paragraphsRef.current = updatedParagraphs;
+
+    await audiobookStorage.update(audiobook.id, { paragraphs: updatedParagraphs });
+  };
+
   if (loading) {
     return (
       <>
@@ -210,6 +228,7 @@ export default function PlayerScreen() {
               currentParagraphIndex={currentParagraphIndex}
               currentTime={position}
               onSeek={seekTo}
+              onTranslate={handleParagraphTranslate}
             />
           </View>
         ) : (

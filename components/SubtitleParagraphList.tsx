@@ -8,6 +8,7 @@ interface SubtitleParagraphListProps {
   currentParagraphIndex: number;
   currentTime: number;
   onSeek: (time: number) => void;
+  onTranslate?: (paragraphId: string, translatedText: string) => void;
 }
 
 export function SubtitleParagraphList({
@@ -15,6 +16,7 @@ export function SubtitleParagraphList({
   currentParagraphIndex,
   currentTime,
   onSeek,
+  onTranslate,
 }: SubtitleParagraphListProps) {
   const scrollViewRef = useRef<ScrollView>(null);
   const itemRefs = useRef<{ [key: number]: View | null }>({});
@@ -53,6 +55,7 @@ export function SubtitleParagraphList({
             isActive={index === currentParagraphIndex}
             currentTime={currentTime}
             onPlay={onSeek}
+            onTranslate={onTranslate}
           />
         </View>
       ))}
