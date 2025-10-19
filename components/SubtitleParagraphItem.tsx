@@ -1,4 +1,4 @@
-import React from 'react';
+import { useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import type { SubtitleParagraph } from '../types/audiobook';
@@ -27,9 +27,9 @@ export function SubtitleParagraphItem({
   onPlay,
   onTranslate,
 }: SubtitleParagraphItemProps) {
-  const lastSubIndex = React.useRef<number>(-1);
-  const [showTranslation, setShowTranslation] = React.useState(false);
-  const [isTranslating, setIsTranslating] = React.useState(false);
+  const lastSubIndex = useRef<number>(-1);
+  const [showTranslation, setShowTranslation] = useState(false);
+  const [isTranslating, setIsTranslating] = useState(false);
 
   const handleTranslateParagraph = async () => {
     if (paragraph.translatedText) {
@@ -39,11 +39,7 @@ export function SubtitleParagraphItem({
 
     setIsTranslating(true);
     try {
-      const translatedText = await translationService.translateText(
-        paragraph.text,
-        'RU',
-        'EN'
-      );
+      const translatedText = await translationService.translateText(paragraph.text, 'RU', 'EN');
 
       onTranslate?.(paragraph.id, translatedText);
       setShowTranslation(true);
@@ -72,8 +68,7 @@ export function SubtitleParagraphItem({
     const subs = paragraph.subtitles;
 
     if (cached >= 0 && cached < subs.length) {
-      if (cached + 1 < subs.length &&
-          adjustedTime >= subs[cached + 1].start) {
+      if (cached + 1 < subs.length && adjustedTime >= subs[cached + 1].start) {
         activeSubIndex = cached + 1;
       } else if (adjustedTime >= subs[cached].start) {
         activeSubIndex = cached;
@@ -97,15 +92,8 @@ export function SubtitleParagraphItem({
   };
 
   return (
-    <View
-      className={`flex-row p-4 mb-2 rounded-lg ${
-        isActive ? 'bg-blue-50' : 'bg-white'
-      }`}
-    >
-      <TouchableOpacity
-        onPress={() => onPlay(paragraph.startTime)}
-        className="mr-3 mt-1"
-      >
+    <View className={`flex-row p-4 mb-2 rounded-lg ${isActive ? 'bg-blue-50' : 'bg-white'}`}>
+      <TouchableOpacity onPress={() => onPlay(paragraph.startTime)} className="mr-3 mt-1">
         <MaterialIcons
           name="play-circle-outline"
           size={28}
@@ -114,9 +102,7 @@ export function SubtitleParagraphItem({
       </TouchableOpacity>
 
       <View className="flex-1">
-        <Text className="text-xs text-gray-500 mb-1">
-          {formatTime(paragraph.startTime)}
-        </Text>
+        <Text className="text-xs text-gray-500 mb-1">{formatTime(paragraph.startTime)}</Text>
         {renderText()}
 
         {showTranslation && paragraph.translatedText && (
@@ -133,20 +119,16 @@ export function SubtitleParagraphItem({
           {isTranslating ? (
             <>
               <ActivityIndicator size="small" color="#3B82F6" />
-              <Text className="text-blue-500 text-sm ml-2">
-                Перевод...
-              </Text>
+              <Text className="text-blue-500 text-sm ml-2">Перевод...</Text>
             </>
           ) : (
             <>
-              <MaterialIcons
-                name="translate"
-                size={16}
-                color="#3B82F6"
-              />
+              <MaterialIcons name="translate" size={16} color="#3B82F6" />
               <Text className="text-blue-500 text-sm ml-1">
                 {paragraph.translatedText
-                  ? (showTranslation ? 'Скрыть перевод' : 'Показать перевод')
+                  ? showTranslation
+                    ? 'Скрыть перевод'
+                    : 'Показать перевод'
                   : 'Перевести абзац'}
               </Text>
             </>

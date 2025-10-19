@@ -22,6 +22,7 @@ export default function PlayerScreen() {
   const sound = useRef<Audio.Sound | null>(null);
   const paragraphsRef = useRef<SubtitleParagraph[]>([]);
   const lastParagraphIndex = useRef<number>(-1);
+  const paragraphIndexMap = useRef<Map<string, number>>(new Map());
 
   // Load audiobook data
   useEffect(() => {
@@ -45,6 +46,13 @@ export default function PlayerScreen() {
 
       if (book.paragraphs) {
         paragraphsRef.current = book.paragraphs;
+
+        // Создаём индекс для быстрого поиска параграфов O(1)
+        const indexMap = new Map<string, number>();
+        book.paragraphs.forEach((p, index) => {
+          indexMap.set(p.id, index);
+        });
+        paragraphIndexMap.current = indexMap;
       }
 
       await loadAudio(book);
@@ -180,9 +188,16 @@ export default function PlayerScreen() {
   const handleParagraphTranslate = async (paragraphId: string, translatedText: string) => {
     if (!audiobook || !audiobook.paragraphs) return;
 
-    const updatedParagraphs = audiobook.paragraphs.map((p) =>
-      p.id === paragraphId ? { ...p, translatedText } : p
-    );
+    // Быстрый поиск по индексу O(1) вместо медленного map() O(n)
+    const index = paragraphIndexMap.current.get(paragraphId);
+    if (index === undefined) return;
+
+    // Создаём новый массив с обновлённым параграфом
+    const updatedParagraphs = [...audiobook.paragraphs];
+    updatedParagraphs[index] = {
+      ...updatedParagraphs[index],
+      translatedText,
+    };
 
     const updatedAudiobook = {
       ...audiobook,

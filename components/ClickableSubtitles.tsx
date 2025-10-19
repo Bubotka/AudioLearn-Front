@@ -27,11 +27,7 @@ export function ClickableSubtitles({ subtitles, activeSubIndex }: ClickableSubti
 
     setIsTranslating(true);
     try {
-      const translated = await translationService.translateText(
-        cleanWord,
-        'RU',
-        'EN'
-      );
+      const translated = await translationService.translateText(cleanWord, 'RU', 'EN');
       setTranslation(translated);
     } catch (error) {
       console.error('translation error:', error);
@@ -42,6 +38,7 @@ export function ClickableSubtitles({ subtitles, activeSubIndex }: ClickableSubti
   };
 
   const handleSpeak = async () => {
+    //todo need to fix cause now we can't to pass language
     try {
       setIsSpeaking(true);
       const isSpeakingNow = await Speech.isSpeakingAsync();
@@ -103,26 +100,16 @@ export function ClickableSubtitles({ subtitles, activeSubIndex }: ClickableSubti
         ))}
       </Text>
 
-      <Modal
-        visible={showMenu}
-        transparent
-        animationType="fade"
-        onRequestClose={handleClose}
-      >
+      <Modal visible={showMenu} transparent animationType="fade" onRequestClose={handleClose}>
         <TouchableOpacity
           className="flex-1 bg-black/30 justify-center items-center"
           activeOpacity={1}
           onPress={handleClose}
         >
-          <TouchableOpacity
-            activeOpacity={1}
-            onPress={(e) => e.stopPropagation()}
-          >
+          <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()}>
             <View className="mx-4 bg-white rounded-2xl p-5 shadow-xl max-w-md w-full">
               <View className="flex-row items-center justify-center mb-4">
-                <Text className="text-2xl font-bold text-gray-900">
-                  {selectedText}
-                </Text>
+                <Text className="text-2xl font-bold text-gray-900">{selectedText}</Text>
                 <TouchableOpacity
                   onPress={handleSpeak}
                   disabled={isSpeaking}
@@ -149,13 +136,8 @@ export function ClickableSubtitles({ subtitles, activeSubIndex }: ClickableSubti
                 )}
               </View>
 
-              <TouchableOpacity
-                onPress={handleClose}
-                className="bg-gray-100 p-4 rounded-xl"
-              >
-                <Text className="text-base text-gray-600 text-center font-medium">
-                  Закрыть
-                </Text>
+              <TouchableOpacity onPress={handleClose} className="bg-gray-100 p-4 rounded-xl">
+                <Text className="text-base text-gray-600 text-center font-medium">Закрыть</Text>
               </TouchableOpacity>
             </View>
           </TouchableOpacity>
