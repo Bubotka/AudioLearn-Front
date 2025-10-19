@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import type { SubtitleParagraph } from '../types/audiobook';
 import { SubtitleParagraphItem } from './SubtitleParagraphItem';
+import { useWordTranslation } from '../contexts/WordTranslationContext';
 
 interface SubtitleParagraphListProps {
   paragraphs: SubtitleParagraph[];
@@ -20,6 +21,7 @@ export function SubtitleParagraphList({
   onTranslate,
 }: SubtitleParagraphListProps) {
   const listRef = useRef<FlashListRef<SubtitleParagraph>>(null);
+  const { hideTranslation } = useWordTranslation();
 
   useEffect(() => {
     if (currentParagraphIndex >= 0 && currentParagraphIndex < paragraphs.length) {
@@ -50,6 +52,8 @@ export function SubtitleParagraphList({
       showsVerticalScrollIndicator={true}
       contentContainerStyle={{ paddingHorizontal: 16 }}
       ListFooterComponent={<View className="h-4" />}
+      onScroll={hideTranslation}
+      scrollEventThrottle={16}
     />
   );
 }

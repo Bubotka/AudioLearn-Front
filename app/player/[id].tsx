@@ -7,6 +7,8 @@ import Slider from '@react-native-community/slider';
 import { audiobookStorage } from '../../services/storage';
 import type { Audiobook, SubtitleParagraph } from '../../types/audiobook';
 import { SubtitleParagraphList } from '../../components/SubtitleParagraphList';
+import { WordTranslationProvider } from '../../contexts/WordTranslationContext';
+import { WordTranslationPopup } from '../../components/WordTranslationPopup';
 
 export default function PlayerScreen() {
   const params = useLocalSearchParams();
@@ -226,7 +228,7 @@ export default function PlayerScreen() {
   }
 
   return (
-    <>
+    <WordTranslationProvider>
       <Stack.Screen
         options={{
           title: audiobook.title,
@@ -235,7 +237,7 @@ export default function PlayerScreen() {
           },
         }}
       />
-      <View className="flex-1 bg-gray-100">
+      <View className="flex-1 bg-gray-100 relative">
         {audiobook.paragraphs && audiobook.paragraphs.length > 0 ? (
           <View className="flex-1 mt-4 mb-3">
             <SubtitleParagraphList
@@ -253,6 +255,9 @@ export default function PlayerScreen() {
             </Text>
           </View>
         )}
+
+        {/* Word Translation Popup - positioned above progress bar */}
+        <WordTranslationPopup />
 
         {/* Progress Bar */}
         <View className="px-6 mb-3">
@@ -300,6 +305,6 @@ export default function PlayerScreen() {
           </TouchableOpacity>
         </View>
       </View>
-    </>
+    </WordTranslationProvider>
   );
 }
