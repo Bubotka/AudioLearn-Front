@@ -3,6 +3,8 @@ import { View, Text, TouchableOpacity, ActivityIndicator, Alert } from 'react-na
 import { MaterialIcons } from '@expo/vector-icons';
 import type { SubtitleParagraph } from '../types/audiobook';
 import { translationService } from '../services/translation';
+import { SelectableText } from './SelectableText';
+import { ClickableSubtitles } from './ClickableSubtitles';
 
 interface SubtitleParagraphItemProps {
   paragraph: SubtitleParagraph;
@@ -54,12 +56,12 @@ export function SubtitleParagraphItem({
   };
 
   const renderText = () => {
-    if (!isActive || !currentTime || !paragraph.subtitles) {
-      return (
-        <Text className="text-base text-gray-900 leading-6">
-          {paragraph.text}
-        </Text>
-      );
+    if (!paragraph.subtitles || paragraph.subtitles.length === 0) {
+      return <SelectableText text={paragraph.text} isActive={false} />;
+    }
+
+    if (!isActive || !currentTime) {
+      return <ClickableSubtitles subtitles={paragraph.subtitles} activeSubIndex={-1} />;
     }
 
     let activeSubIndex = -1;
@@ -88,26 +90,7 @@ export function SubtitleParagraphItem({
 
     lastSubIndex.current = activeSubIndex;
 
-    if (activeSubIndex === -1) {
-      return (
-        <Text className="text-base text-gray-900 leading-6">
-          {paragraph.text}
-        </Text>
-      );
-    }
-
-    return (
-      <Text className="text-base leading-6">
-        {paragraph.subtitles.map((sub, index) => (
-          <Text
-            key={index}
-            className={index === activeSubIndex ? 'text-blue-600 font-semibold' : 'text-gray-900'}
-          >
-            {sub.text}{index < paragraph.subtitles.length - 1 ? ' ' : ''}
-          </Text>
-        ))}
-      </Text>
-    );
+    return <ClickableSubtitles subtitles={paragraph.subtitles} activeSubIndex={activeSubIndex} />;
   };
 
   return (
