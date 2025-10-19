@@ -1,5 +1,7 @@
 import React from 'react';
 import { View, Text, Alert } from 'react-native';
+import { ClickableSelectableText } from './ClickableSelectableText';
+import type { ClickableSelectableTextEvent } from './ClickableSelectableText';
 import { translationService } from '../services/translation';
 import type { Subtitle } from '../types/audiobook';
 import { useWordTranslation } from '../contexts/WordTranslationContext';
@@ -12,15 +14,29 @@ interface ClickableSubtitlesProps {
 export function ClickableSubtitles({ subtitles, activeSubIndex }: ClickableSubtitlesProps) {
   const { showTranslation, setTranslation, setIsTranslating } = useWordTranslation();
 
-  const handleWordPress = async (word: string) => {
-    const cleanWord = word.trim();
-    if (!cleanWord) return;
+  const handleEvent = async (event: ClickableSelectableTextEvent) => {
+    console.log('Event received:', JSON.stringify(event, null, 2));
 
-    showTranslation(cleanWord);
+    let textToTranslate = '';
+
+    if (event.eventType === 'wordClick' && event.word) {
+      // Quick click on word - immediate translation
+      textToTranslate = event.word.trim();
+    } else if (event.eventType === 'textSelection' && event.highlightedText) {
+      // Text selection - translation after menu selection
+      textToTranslate = event.highlightedText.trim();
+    }
+
+    if (!textToTranslate) {
+      console.log('No text to translate');
+      return;
+    }
+
+    showTranslation(textToTranslate);
 
     setIsTranslating(true);
     try {
-      const translated = await translationService.translateText(cleanWord, 'RU', 'EN');
+      const translated = await translationService.translateText(textToTranslate, 'RU', 'EN');
       setTranslation(translated);
     } catch (error) {
       console.error('translation error:', error);
@@ -30,36 +46,31 @@ export function ClickableSubtitles({ subtitles, activeSubIndex }: ClickableSubti
     }
   };
 
-  const renderWords = (text: string, isActive: boolean) => {
-    const words = text.split(/(\s+)/);
-
-    return words.map((word, idx) => {
-      const cleanWord = word.trim();
-      if (!cleanWord) return <Text key={idx}>{word}</Text>;
-
-      return (
-        <Text
-          key={idx}
-          onPress={() => handleWordPress(word)}
-          className={isActive ? 'text-gray-900' : 'text-gray-500'}
-          style={isActive ? { textDecorationLine: 'underline' } : undefined}
-        >
-          {word}
-        </Text>
-      );
-    });
-  };
-
   return (
     <View>
-      <Text className="text-xl leading-8">
-        {subtitles.map((sub, index) => (
-          <React.Fragment key={index}>
-            {renderWords(sub.text, index === activeSubIndex)}
-            {index < subtitles.length - 1 && ' '}
-          </React.Fragment>
-        ))}
-      </Text>
+      <ClickableSelectableText
+        menuOptions={['Translate']}
+        onEvent={handleEvent}
+        style={{
+          fontSize: 20,
+          lineHeight: 32,
+        }}
+      >
+        <Text style={{ fontSize: 20, lineHeight: 32 }}>
+          {subtitles.map((sub, index) => (
+            <Text
+              key={index}
+              style={{
+                color: index === activeSubIndex ? '#111827' : '#6B7280',
+                textDecorationLine: index === activeSubIndex ? 'underline' : 'none',
+              }}
+            >
+              {sub.text}
+              {index < subtitles.length - 1 ? ' ' : ''}
+            </Text>
+          ))}
+        </Text>
+      </ClickableSelectableText>
     </View>
   );
 }

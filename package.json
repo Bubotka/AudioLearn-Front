@@ -4,14 +4,15 @@
   "main": "index.ts",
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-native-community/slider": "5.0.1",
+    "@rob117/react-native-selectable-text": "^2.1.0",
     "@shopify/flash-list": "2.0.2",
     "expo": "~54.0.6",
     "expo-av": "~16.0.7",
