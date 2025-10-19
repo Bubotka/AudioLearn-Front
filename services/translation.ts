@@ -58,10 +58,6 @@ class TranslationService {
       throw new Error('failed to translate text', { cause: error });
     }
   }
-
-  clearCache(): void {
-    this.cache.clear();
-  }
 }
 
 export const translationService = new TranslationService();

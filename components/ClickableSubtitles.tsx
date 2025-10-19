@@ -83,7 +83,8 @@ export function ClickableSubtitles({ subtitles, activeSubIndex }: ClickableSubti
         <Text
           key={idx}
           onPress={() => handleWordPress(word)}
-          className={isActive ? 'text-blue-600 font-semibold' : 'text-gray-900'}
+          className={isActive ? 'text-gray-900' : 'text-gray-500'}
+          style={isActive ? { textDecorationLine: 'underline' } : undefined}
         >
           {word}
         </Text>
@@ -93,7 +94,7 @@ export function ClickableSubtitles({ subtitles, activeSubIndex }: ClickableSubti
 
   return (
     <View>
-      <Text className="text-base leading-6">
+      <Text className="text-xl leading-8">
         {subtitles.map((sub, index) => (
           <React.Fragment key={index}>
             {renderWords(sub.text, index === activeSubIndex)}

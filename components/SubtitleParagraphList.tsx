@@ -1,5 +1,6 @@
 import React, { useRef, useEffect } from 'react';
-import { ScrollView, View } from 'react-native';
+import { View } from 'react-native';
+import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import type { SubtitleParagraph } from '../types/audiobook';
 import { SubtitleParagraphItem } from './SubtitleParagraphItem';
 
@@ -18,48 +19,37 @@ export function SubtitleParagraphList({
   onSeek,
   onTranslate,
 }: SubtitleParagraphListProps) {
-  const scrollViewRef = useRef<ScrollView>(null);
-  const itemRefs = useRef<{ [key: number]: View | null }>({});
+  const listRef = useRef<FlashListRef<SubtitleParagraph>>(null);
 
   useEffect(() => {
-    if (currentParagraphIndex >= 0 && itemRefs.current[currentParagraphIndex]) {
-      itemRefs.current[currentParagraphIndex]?.measureLayout(
-        scrollViewRef.current as any,
-        (x, y) => {
-          scrollViewRef.current?.scrollTo({
-            y: Math.max(0, y - 10),
-            animated: true,
-          });
-        },
-        () => {}
-      );
+    if (currentParagraphIndex >= 0 && currentParagraphIndex < paragraphs.length) {
+      listRef.current?.scrollToIndex({
+        index: currentParagraphIndex,
+        animated: true,
+        viewPosition: 0.1,
+      });
     }
-  }, [currentParagraphIndex]);
+  }, [currentParagraphIndex, paragraphs.length]);
+
+  const renderItem = ({ item, index }: { item: SubtitleParagraph; index: number }) => (
+    <SubtitleParagraphItem
+      paragraph={item}
+      isActive={index === currentParagraphIndex}
+      currentTime={currentTime}
+      onPlay={onSeek}
+      onTranslate={onTranslate}
+    />
+  );
 
   return (
-    <ScrollView
-      ref={scrollViewRef}
-      className="flex-1 px-4"
+    <FlashList
+      ref={listRef}
+      data={paragraphs}
+      renderItem={renderItem}
+      keyExtractor={(item) => item.id}
       showsVerticalScrollIndicator={true}
-    >
-      {paragraphs.map((paragraph, index) => (
-        <View
-          key={paragraph.id}
-          ref={(ref) => {
-            itemRefs.current[index] = ref;
-          }}
-          collapsable={false}
-        >
-          <SubtitleParagraphItem
-            paragraph={paragraph}
-            isActive={index === currentParagraphIndex}
-            currentTime={currentTime}
-            onPlay={onSeek}
-            onTranslate={onTranslate}
-          />
-        </View>
-      ))}
-      <View className="h-4" />
-    </ScrollView>
+      contentContainerStyle={{ paddingHorizontal: 16 }}
+      ListFooterComponent={<View className="h-4" />}
+    />
   );
 }

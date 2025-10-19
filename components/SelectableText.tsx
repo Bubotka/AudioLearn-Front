@@ -76,7 +76,7 @@ export function SelectableText({ text, isActive }: SelectableTextProps) {
 
   return (
     <View>
-      <Text className={`text-base leading-6 ${isActive ? 'font-semibold text-gray-900' : 'text-gray-800'}`}>
+      <Text className="text-xl leading-8">
         {words.map((word, index) => {
           const cleanWord = word.trim();
           if (!cleanWord) return <Text key={index}>{word}</Text>;
@@ -85,7 +85,7 @@ export function SelectableText({ text, isActive }: SelectableTextProps) {
             <Text
               key={index}
               onPress={() => handleWordPress(word)}
-              className="active:bg-blue-100"
+              className="text-gray-500"
             >
               {word}
             </Text>

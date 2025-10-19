@@ -64,24 +64,27 @@ export function SubtitleParagraphItem({
       return <ClickableSubtitles subtitles={paragraph.subtitles} activeSubIndex={-1} />;
     }
 
+    // Добавляем offset +300ms для более ранней подсветки
+    const adjustedTime = currentTime + 0.3;
+
     let activeSubIndex = -1;
     const cached = lastSubIndex.current;
     const subs = paragraph.subtitles;
 
     if (cached >= 0 && cached < subs.length) {
       if (cached + 1 < subs.length &&
-          currentTime >= subs[cached + 1].start) {
+          adjustedTime >= subs[cached + 1].start) {
         activeSubIndex = cached + 1;
-      } else if (currentTime >= subs[cached].start) {
+      } else if (adjustedTime >= subs[cached].start) {
         activeSubIndex = cached;
-      } else if (cached > 0 && currentTime >= subs[cached - 1].start) {
+      } else if (cached > 0 && adjustedTime >= subs[cached - 1].start) {
         activeSubIndex = cached - 1;
       }
     }
 
     if (activeSubIndex === -1) {
       for (let i = subs.length - 1; i >= 0; i--) {
-        if (currentTime >= subs[i].start) {
+        if (adjustedTime >= subs[i].start) {
           activeSubIndex = i;
           break;
         }
@@ -117,7 +120,7 @@ export function SubtitleParagraphItem({
         {renderText()}
 
         {showTranslation && paragraph.translatedText && (
-          <Text className="text-base text-gray-600 mt-2 italic leading-6">
+          <Text className="text-xl text-gray-600 mt-2 italic leading-8">
             {paragraph.translatedText}
           </Text>
         )}
