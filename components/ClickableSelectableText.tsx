@@ -1,5 +1,10 @@
 import React, { useRef, useEffect } from 'react';
-import { requireNativeComponent, findNodeHandle, DeviceEventEmitter, StyleSheet, ViewStyle } from 'react-native';
+import {
+  requireNativeComponent,
+  findNodeHandle,
+  DeviceEventEmitter,
+  ViewStyle,
+} from 'react-native';
 import type { ViewProps } from 'react-native';
 
 interface NativeClickableSelectableTextProps extends ViewProps {
@@ -54,11 +59,7 @@ export function ClickableSelectableText({
   }, [onEvent]);
 
   return (
-    <NativeClickableSelectableText
-      ref={viewRef}
-      style={style}
-      menuOptions={menuOptions}
-    >
+    <NativeClickableSelectableText ref={viewRef} style={style} menuOptions={menuOptions}>
       {children}
     </NativeClickableSelectableText>
   );
