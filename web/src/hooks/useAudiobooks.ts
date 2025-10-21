@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Audiobook } from '@audiolearn/shared';
-import { audiobookStorage } from '@audiolearn/shared';
+import { audiobookStorage } from '../services/storage';
 
 export function useAudiobooks() {
   const [audiobooks, setAudiobooks] = useState<Audiobook[]>([]);
@@ -21,21 +21,6 @@ export function useAudiobooks() {
   useEffect(() => {
     loadAudiobooks();
   }, [loadAudiobooks]);
-
-  // Auto-refresh while downloading
-  useEffect(() => {
-    const hasDownloading = audiobooks.some((book) => book.status === 'downloading');
-
-    if (!hasDownloading) {
-      return;
-    }
-
-    const interval = setInterval(() => {
-      loadAudiobooks();
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [audiobooks, loadAudiobooks]);
 
   const addAudiobook = useCallback(
     async (audiobook: Audiobook) => {

@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import type { Audiobook } from '../../types/audiobook';
+import type { Audiobook } from '@audiolearn/shared';
 
 interface AudiobookCardProps {
   audiobook: Audiobook;

@@ -12,9 +12,8 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
-import type { Audiobook } from '../../types/audiobook';
-import { youtubeService } from '../../services/youtube';
-import { groupSubtitlesIntoParagraphs } from '../../utils/subtitleGrouping';
+import type { Audiobook } from '@audiolearn/shared';
+import { youtubeService, groupSubtitlesIntoParagraphs } from '@audiolearn/shared';
 
 interface AddAudiobookModalProps {
   visible: boolean;

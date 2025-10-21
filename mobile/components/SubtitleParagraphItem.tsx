@@ -1,8 +1,8 @@
 import { useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import type { SubtitleParagraph } from '../../types/audiobook';
-import { translationService } from '../../services/translation';
+import type { SubtitleParagraph } from '@audiolearn/shared';
+import { translationService } from '@audiolearn/shared';
 import { SelectableText } from './SelectableText';
 import { ClickableSubtitles } from './ClickableSubtitles';
 
