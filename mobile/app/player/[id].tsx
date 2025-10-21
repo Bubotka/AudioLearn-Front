@@ -4,8 +4,8 @@ import { useLocalSearchParams, router, Stack } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import Slider from '@react-native-community/slider';
-import { audiobookStorage } from '../../services/storage';
-import type { Audiobook, SubtitleParagraph } from '../../types/audiobook';
+import { audiobookStorage } from '../../../services/storage';
+import type { Audiobook, SubtitleParagraph } from '../../../types/audiobook';
 import { SubtitleParagraphList } from '../../components/SubtitleParagraphList';
 import { WordTranslationProvider } from '../../contexts/WordTranslationContext';
 import { WordTranslationPopup } from '../../components/WordTranslationPopup';
@@ -30,7 +30,7 @@ export default function PlayerScreen() {
   useEffect(() => {
     loadAudiobook();
     return () => {
-        sound.current?.unloadAsync();
+      sound.current?.unloadAsync();
     };
   }, [audiobookId]);
 
@@ -108,15 +108,14 @@ export default function PlayerScreen() {
       const cachedIdx = lastParagraphIndex.current;
 
       if (cachedIdx >= 0 && cachedIdx < paragraphs.length) {
-        if (cachedIdx + 1 < paragraphs.length &&
-            currentTime >= paragraphs[cachedIdx + 1].startTime) {
+        if (
+          cachedIdx + 1 < paragraphs.length &&
+          currentTime >= paragraphs[cachedIdx + 1].startTime
+        ) {
           currentIndex = cachedIdx + 1;
-        }
-        else if (currentTime >= paragraphs[cachedIdx].startTime) {
+        } else if (currentTime >= paragraphs[cachedIdx].startTime) {
           currentIndex = cachedIdx;
-        }
-        else if (cachedIdx > 0 &&
-                 currentTime >= paragraphs[cachedIdx - 1].startTime) {
+        } else if (cachedIdx > 0 && currentTime >= paragraphs[cachedIdx - 1].startTime) {
           currentIndex = cachedIdx - 1;
         }
       }
@@ -250,9 +249,7 @@ export default function PlayerScreen() {
           </View>
         ) : (
           <View className="flex-1 mx-4 mt-4 mb-3 bg-white rounded-xl px-4 py-3 justify-center items-center">
-            <Text className="text-gray-500 text-center">
-              No subtitles available
-            </Text>
+            <Text className="text-gray-500 text-center">No subtitles available</Text>
           </View>
         )}
 
@@ -290,11 +287,7 @@ export default function PlayerScreen() {
             onPress={togglePlayPause}
             className="bg-blue-500 rounded-full p-6 shadow-lg mx-4"
           >
-            <MaterialIcons
-              name={isPlaying ? 'pause' : 'play-arrow'}
-              size={48}
-              color="white"
-            />
+            <MaterialIcons name={isPlaying ? 'pause' : 'play-arrow'} size={48} color="white" />
           </TouchableOpacity>
 
           <TouchableOpacity

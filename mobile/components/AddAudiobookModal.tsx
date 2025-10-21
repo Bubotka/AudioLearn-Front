@@ -12,9 +12,9 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
-import type { Audiobook } from '../types/audiobook';
-import { youtubeService } from '../services/youtube';
-import { groupSubtitlesIntoParagraphs } from '../utils/subtitleGrouping';
+import type { Audiobook } from '../../types/audiobook';
+import { youtubeService } from '../../services/youtube';
+import { groupSubtitlesIntoParagraphs } from '../../utils/subtitleGrouping';
 
 interface AddAudiobookModalProps {
   visible: boolean;
@@ -131,12 +131,7 @@ export function AddAudiobookModal({ visible, onClose, onAdd }: AddAudiobookModal
   };
 
   return (
-    <Modal
-      visible={visible}
-      transparent = {false}
-      animationType="fade"
-      onRequestClose={handleClose}
-    >
+    <Modal visible={visible} transparent={false} animationType="fade" onRequestClose={handleClose}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         className="flex-1"
@@ -153,77 +148,69 @@ export function AddAudiobookModal({ visible, onClose, onAdd }: AddAudiobookModal
               className="w-full"
             >
               <View className="flex-row items-center justify-between mb-6">
-              <Text className="text-2xl font-bold text-gray-900">
-                Add Audiobook
-              </Text>
-              <TouchableOpacity onPress={handleClose} disabled={loading}>
-                <MaterialIcons name="close" size={28} color="#8E8E93" />
-              </TouchableOpacity>
-            </View>
-
-            <Text className="text-sm text-gray-600 mb-3">
-              Step 1: Upload MP3 file
-            </Text>
-
-            <TouchableOpacity
-              className="bg-gray-100 p-4 rounded-lg mb-4 flex-row items-center justify-between"
-              onPress={handlePickAudio}
-              disabled={loading}
-            >
-              <View className="flex-row items-center flex-1">
-                <MaterialIcons
-                  name={audioFile ? "check-circle" : "audiotrack"}
-                  size={24}
-                  color={audioFile ? "#10B981" : "#6B7280"}
-                />
-                <Text
-                  className={`ml-3 text-base flex-1 ${audioFile ? 'text-gray-900' : 'text-gray-500'}`}
-                  numberOfLines={1}
-                >
-                  {audioFile ? audioFile.name : 'Select MP3 file...'}
-                </Text>
+                <Text className="text-2xl font-bold text-gray-900">Add Audiobook</Text>
+                <TouchableOpacity onPress={handleClose} disabled={loading}>
+                  <MaterialIcons name="close" size={28} color="#8E8E93" />
+                </TouchableOpacity>
               </View>
-              <MaterialIcons name="folder-open" size={24} color="#3B82F6" />
-            </TouchableOpacity>
 
-            <Text className="text-sm text-gray-600 mb-3">
-              Step 2: YouTube URL (for subtitles)
-            </Text>
+              <Text className="text-sm text-gray-600 mb-3">Step 1: Upload MP3 file</Text>
 
-            <TextInput
-              className="bg-gray-100 p-4 rounded-lg text-base mb-6"
-              placeholder="https://youtube.com/watch?v=..."
-              value={youtubeUrl}
-              onChangeText={setYoutubeUrl}
-              autoCapitalize="none"
-              autoCorrect={false}
-              editable={!loading}
-              multiline
-            />
-
-            <TouchableOpacity
-              className={`p-4 rounded-lg items-center flex-row justify-center ${
-                loading || !audioFile || !youtubeUrl ? 'bg-gray-400' : 'bg-blue-500'
-              }`}
-              onPress={handleAdd}
-              disabled={loading || !audioFile || !youtubeUrl}
-            >
-              {loading ? (
-                <>
-                  <ActivityIndicator color="white" className="mr-2" />
-                  <Text className="text-white text-base font-semibold">
-                    Adding...
+              <TouchableOpacity
+                className="bg-gray-100 p-4 rounded-lg mb-4 flex-row items-center justify-between"
+                onPress={handlePickAudio}
+                disabled={loading}
+              >
+                <View className="flex-row items-center flex-1">
+                  <MaterialIcons
+                    name={audioFile ? 'check-circle' : 'audiotrack'}
+                    size={24}
+                    color={audioFile ? '#10B981' : '#6B7280'}
+                  />
+                  <Text
+                    className={`ml-3 text-base flex-1 ${audioFile ? 'text-gray-900' : 'text-gray-500'}`}
+                    numberOfLines={1}
+                  >
+                    {audioFile ? audioFile.name : 'Select MP3 file...'}
                   </Text>
-                </>
-              ) : (
-                <>
-                  <MaterialIcons name="add" size={24} color="white" />
-                  <Text className="text-white text-base font-semibold ml-2">
-                    Add to Library
-                  </Text>
-                </>
-              )}
-            </TouchableOpacity>
+                </View>
+                <MaterialIcons name="folder-open" size={24} color="#3B82F6" />
+              </TouchableOpacity>
+
+              <Text className="text-sm text-gray-600 mb-3">
+                Step 2: YouTube URL (for subtitles)
+              </Text>
+
+              <TextInput
+                className="bg-gray-100 p-4 rounded-lg text-base mb-6"
+                placeholder="https://youtube.com/watch?v=..."
+                value={youtubeUrl}
+                onChangeText={setYoutubeUrl}
+                autoCapitalize="none"
+                autoCorrect={false}
+                editable={!loading}
+                multiline
+              />
+
+              <TouchableOpacity
+                className={`p-4 rounded-lg items-center flex-row justify-center ${
+                  loading || !audioFile || !youtubeUrl ? 'bg-gray-400' : 'bg-blue-500'
+                }`}
+                onPress={handleAdd}
+                disabled={loading || !audioFile || !youtubeUrl}
+              >
+                {loading ? (
+                  <>
+                    <ActivityIndicator color="white" className="mr-2" />
+                    <Text className="text-white text-base font-semibold">Adding...</Text>
+                  </>
+                ) : (
+                  <>
+                    <MaterialIcons name="add" size={24} color="white" />
+                    <Text className="text-white text-base font-semibold ml-2">Add to Library</Text>
+                  </>
+                )}
+              </TouchableOpacity>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>

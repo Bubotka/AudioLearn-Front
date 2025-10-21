@@ -2,8 +2,8 @@ import React from 'react';
 import { View, Text, Alert } from 'react-native';
 import { ClickableSelectableText } from './ClickableSelectableText';
 import type { ClickableSelectableTextEvent } from './ClickableSelectableText';
-import { translationService } from '../services/translation';
-import type { Subtitle } from '../types/audiobook';
+import { translationService } from '../../services/translation';
+import type { Subtitle } from '../../types/audiobook';
 import { useWordTranslation } from '../contexts/WordTranslationContext';
 
 interface ClickableSubtitlesProps {

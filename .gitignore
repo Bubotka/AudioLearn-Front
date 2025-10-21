@@ -37,11 +37,11 @@ yarn-error.*
 *.tsbuildinfo
 
 # Native build artifacts (but keep source code)
-/android/build
-/android/app/build
-/android/.gradle
-/android/local.properties
-/ios/build
-/ios/Pods
+/mobile/android/build
+/mobile/android/app/build
+/mobile/android/.gradle
+/mobile/android/local.properties
+/mobile/ios/build
+/mobile/ios/Pods
 /ios/*.xcworkspace
 /ios/*.xcuserstate

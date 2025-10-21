@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, Alert } from 'react-native';
-import { translationService } from '../services/translation';
+import { translationService } from '../../services/translation';
 import { useWordTranslation } from '../contexts/WordTranslationContext';
 
 interface SelectableTextProps {

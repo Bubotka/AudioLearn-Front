@@ -1,7 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { View } from 'react-native';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
-import type { SubtitleParagraph } from '../types/audiobook';
+import type { SubtitleParagraph } from '../../types/audiobook';
 import { SubtitleParagraphItem } from './SubtitleParagraphItem';
 import { useWordTranslation } from '../contexts/WordTranslationContext';
 

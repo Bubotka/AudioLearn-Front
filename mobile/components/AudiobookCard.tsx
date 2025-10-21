@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import type { Audiobook } from '../types/audiobook';
+import type { Audiobook } from '../../types/audiobook';
 
 interface AudiobookCardProps {
   audiobook: Audiobook;
@@ -71,7 +71,10 @@ export function AudiobookCard({ audiobook, onPress, onDelete, onCancel }: Audiob
               resizeMode="cover"
             />
           ) : (
-            <View className="w-full bg-blue-500 items-center justify-center" style={{ height: 192 }}>
+            <View
+              className="w-full bg-blue-500 items-center justify-center"
+              style={{ height: 192 }}
+            >
               <MaterialIcons name="audiotrack" size={64} color="white" />
             </View>
           )}
@@ -125,10 +128,7 @@ export function AudiobookCard({ audiobook, onPress, onDelete, onCancel }: Audiob
                 </Text>
               </View>
               <View className="h-1.5 bg-white/20 rounded-full overflow-hidden">
-                <View
-                  className="h-full bg-blue-500"
-                  style={{ width: `${audiobook.progress}%` }}
-                />
+                <View className="h-full bg-blue-500" style={{ width: `${audiobook.progress}%` }} />
               </View>
             </View>
           )}
