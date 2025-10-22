@@ -131,7 +131,7 @@ export function ClickableSubtitles({
         {subtitles.map((sub, index) => {
           const words = sub.text.split(/(\s+)/); // Split by spaces but keep them
           return (
-            <>
+            <span key={`subtitle-${index}`}>
               {words.map((word, wordIndex) => {
                 // If it's just whitespace, render it as is
                 if (/^\s+$/.test(word)) {
@@ -153,7 +153,7 @@ export function ClickableSubtitles({
                 );
               })}
               {index < subtitles.length - 1 && ' '}
-            </>
+            </span>
           );
         })}
       </span>
