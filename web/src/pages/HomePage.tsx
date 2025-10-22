@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAudiobooks } from '../hooks/useAudiobooks';
 import type { Audiobook, Subtitle } from '@audiolearn/shared';
 import { youtubeService, groupSubtitlesIntoParagraphs } from '@audiolearn/shared';
+import srtParser2 from 'srt-parser-2';
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -11,6 +12,8 @@ export default function HomePage() {
   const [uploadType, setUploadType] = useState<'youtube' | 'file'>('youtube');
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [srtFile, setSrtFile] = useState<File | null>(null);
 
   const handleAddFromYoutube = async () => {
     if (!youtubeUrl.trim()) return;
@@ -20,7 +23,10 @@ export default function HomePage() {
 
       const metadata = await youtubeService.getMetadata(youtubeUrl);
       const subtitles = await youtubeService.getSubtitles(youtubeUrl, 'en');
-      const paragraphs = groupSubtitlesIntoParagraphs(subtitles);
+      // Use larger paragraphs for web (desktop screens)
+      const paragraphs = groupSubtitlesIntoParagraphs(subtitles, {
+        maxParagraphLength: 500,
+      });
 
       const newBook: Audiobook = {
         id: Date.now().toString(),
@@ -46,13 +52,7 @@ export default function HomePage() {
     }
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (!files) return;
-
-    const audioFile = Array.from(files).find(f => f.type.startsWith('audio/'));
-    const srtFile = Array.from(files).find(f => f.name.endsWith('.srt'));
-
+  const handleFileUpload = async () => {
     if (!audioFile) {
       alert('Please select an audio file');
       return;
@@ -65,13 +65,31 @@ export default function HomePage() {
       const audioUrl = URL.createObjectURL(audioFile);
 
       // Parse SRT if provided
-      let subtitles = [];
-      let paragraphs = [];
+      let subtitles: Subtitle[] = [];
+      let paragraphs: any[] = [];
 
       if (srtFile) {
         const srtText = await srtFile.text();
-        subtitles = parseSRT(srtText);
-        paragraphs = groupSubtitlesIntoParagraphs(subtitles);
+
+        // Parse SRT using library
+        const parser = new srtParser2();
+        const srtArray = parser.fromSrt(srtText);
+
+        // Convert to our Subtitle format
+        subtitles = srtArray.map((item: any) => ({
+          start: parseFloat(item.startSeconds),
+          end: parseFloat(item.endSeconds),
+          text: item.text,
+        }));
+
+        // Use larger paragraphs for web (desktop screens)
+        paragraphs = groupSubtitlesIntoParagraphs(subtitles, {
+          maxParagraphLength: 500,
+        });
+
+        console.log('Parsed subtitles:', subtitles.length);
+        console.log('Grouped paragraphs:', paragraphs.length);
+        console.log('First paragraph:', paragraphs[0]);
       }
 
       const newBook: Audiobook = {
@@ -86,29 +104,14 @@ export default function HomePage() {
 
       await addAudiobook(newBook);
       setShowModal(false);
+      setAudioFile(null);
+      setSrtFile(null);
     } catch (error) {
       console.error('failed to add audiobook:', error);
       alert('Failed to add audiobook');
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const parseSRT = (srt: string): Subtitle[] => {
-    const blocks = srt.trim().split('\n\n');
-    return blocks.map(block => {
-      const lines = block.split('\n');
-      if (lines.length < 3) return null;
-
-      const timeMatch = lines[1].match(/(\d{2}):(\d{2}):(\d{2}),(\d{3}) --> (\d{2}):(\d{2}):(\d{2}),(\d{3})/);
-      if (!timeMatch) return null;
-
-      const start = parseInt(timeMatch[1]) * 3600 + parseInt(timeMatch[2]) * 60 + parseInt(timeMatch[3]) + parseInt(timeMatch[4]) / 1000;
-      const end = parseInt(timeMatch[5]) * 3600 + parseInt(timeMatch[6]) * 60 + parseInt(timeMatch[7]) + parseInt(timeMatch[8]) / 1000;
-      const text = lines.slice(2).join(' ');
-
-      return { start, end, text };
-    }).filter((item): item is Subtitle => item !== null);
   };
 
   if (loading) {
@@ -123,12 +126,25 @@ export default function HomePage() {
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">AudioLearn</h1>
-        <button
-          onClick={() => setShowModal(true)}
-          className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600"
-        >
-          Add Audiobook
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => {
+              if (confirm('Clear all audiobooks from storage?')) {
+                localStorage.clear();
+                window.location.reload();
+              }
+            }}
+            className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 text-sm"
+          >
+            Clear Storage
+          </button>
+          <button
+            onClick={() => setShowModal(true)}
+            className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600"
+          >
+            Add Audiobook
+          </button>
+        </div>
       </div>
 
       {audiobooks.length === 0 ? (
@@ -241,24 +257,60 @@ export default function HomePage() {
               <>
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Select audio file (MP3, M4A, etc.) and optionally SRT subtitles
+                    Audio File (required)
                   </label>
                   <input
                     type="file"
-                    multiple
-                    accept="audio/*,.srt"
-                    onChange={handleFileUpload}
+                    accept="audio/*"
+                    onChange={(e) => setAudioFile(e.target.files?.[0] || null)}
                     disabled={isLoading}
                     className="w-full border border-gray-300 rounded px-4 py-2"
                   />
+                  {audioFile && (
+                    <p className="text-sm text-green-600 mt-1">
+                      Selected: {audioFile.name}
+                    </p>
+                  )}
                 </div>
-                <button
-                  onClick={() => setShowModal(false)}
-                  disabled={isLoading}
-                  className="w-full bg-gray-300 px-4 py-2 rounded hover:bg-gray-400 disabled:bg-gray-200"
-                >
-                  Cancel
-                </button>
+
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Subtitle File (optional)
+                  </label>
+                  <input
+                    type="file"
+                    accept=".srt"
+                    onChange={(e) => setSrtFile(e.target.files?.[0] || null)}
+                    disabled={isLoading}
+                    className="w-full border border-gray-300 rounded px-4 py-2"
+                  />
+                  {srtFile && (
+                    <p className="text-sm text-green-600 mt-1">
+                      Selected: {srtFile.name}
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleFileUpload}
+                    disabled={isLoading || !audioFile}
+                    className="flex-1 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:bg-gray-400"
+                  >
+                    {isLoading ? 'Uploading...' : 'Upload'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowModal(false);
+                      setAudioFile(null);
+                      setSrtFile(null);
+                    }}
+                    disabled={isLoading}
+                    className="flex-1 bg-gray-300 px-4 py-2 rounded hover:bg-gray-400 disabled:bg-gray-200"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </>
             )}
           </div>

@@ -2,25 +2,21 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { audiobookStorage } from '../services/storage';
 import type { Audiobook, SubtitleParagraph } from '@audiolearn/shared';
-import { translationService } from '@audiolearn/shared';
+import { SubtitleParagraphList } from '../components/SubtitleParagraphList';
+import AudioPlayer from 'react-h5-audio-player';
+import 'react-h5-audio-player/lib/styles.css';
 
 export default function PlayerPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const audioRef = useRef<HTMLAudioElement>(null);
+  const playerRef = useRef<AudioPlayer>(null);
 
   const [audiobook, setAudiobook] = useState<Audiobook | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
   const [activeParagraphIndex, setActiveParagraphIndex] = useState(-1);
-
-  // Translation state
-  const [selectedText, setSelectedText] = useState('');
-  const [translation, setTranslation] = useState('');
-  const [isTranslating, setIsTranslating] = useState(false);
-  const [showTranslation, setShowTranslation] = useState(false);
+  const lastParagraphIndex = useRef(-1);
+  const paragraphsRef = useRef<SubtitleParagraph[]>([]);
 
   useEffect(() => {
     const loadAudiobook = async () => {
@@ -29,9 +25,8 @@ export default function PlayerPage() {
         const book = await audiobookStorage.get(id);
         setAudiobook(book);
 
-        // Restore last position
-        if (book?.lastPosition && audioRef.current) {
-          audioRef.current.currentTime = book.lastPosition;
+        if (book?.paragraphs) {
+          paragraphsRef.current = book.paragraphs;
         }
       } catch (error) {
         console.error('failed to load audiobook:', error);
@@ -43,104 +38,71 @@ export default function PlayerPage() {
     loadAudiobook();
   }, [id]);
 
-  // Update current time
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
+  // Update paragraph tracking when time changes
+  const handleListen = (e: Event) => {
+    const audio = e.currentTarget as HTMLAudioElement;
+    const time = audio.currentTime;
+    setCurrentTime(time);
 
-    const handleTimeUpdate = () => {
-      setCurrentTime(audio.currentTime);
+    const paragraphs = paragraphsRef.current;
+    if (!paragraphs || paragraphs.length === 0) return;
 
-      // Find active paragraph
-      if (audiobook?.paragraphs) {
-        const index = audiobook.paragraphs.findIndex(
-          (p) => audio.currentTime >= p.startTime && audio.currentTime <= p.endTime
-        );
-        setActiveParagraphIndex(index);
+    let currentIndex = -1;
+    const cachedIdx = lastParagraphIndex.current;
+
+    // Fast path: check cached index
+    if (cachedIdx >= 0 && cachedIdx < paragraphs.length) {
+      if (
+        cachedIdx + 1 < paragraphs.length &&
+        time >= paragraphs[cachedIdx + 1].startTime &&
+        time <= paragraphs[cachedIdx + 1].endTime
+      ) {
+        currentIndex = cachedIdx + 1;
+      } else if (
+        time >= paragraphs[cachedIdx].startTime &&
+        time <= paragraphs[cachedIdx].endTime
+      ) {
+        currentIndex = cachedIdx;
       }
-    };
+    }
 
-    const handleLoadedMetadata = () => {
-      setDuration(audio.duration);
-    };
+    // Fallback: search for active paragraph
+    if (currentIndex === -1) {
+      for (let i = paragraphs.length - 1; i >= 0; i--) {
+        if (time >= paragraphs[i].startTime && time <= paragraphs[i].endTime) {
+          currentIndex = i;
+          break;
+        }
+      }
+    }
 
-    audio.addEventListener('timeupdate', handleTimeUpdate);
-    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+    if (currentIndex !== lastParagraphIndex.current) {
+      lastParagraphIndex.current = currentIndex;
+      setActiveParagraphIndex(currentIndex);
+    }
+  };
 
-    return () => {
-      audio.removeEventListener('timeupdate', handleTimeUpdate);
-      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
-    };
-  }, [audiobook]);
+  const seekToTime = (time: number) => {
+    if (playerRef.current?.audio?.current) {
+      playerRef.current.audio.current.currentTime = time;
+      setCurrentTime(time);
+    }
+  };
 
-  // Save position periodically
-  useEffect(() => {
+  const handleParagraphTranslate = async (
+    paragraph: SubtitleParagraph,
+    translation: string
+  ) => {
     if (!id || !audiobook) return;
 
-    const interval = setInterval(async () => {
-      if (audioRef.current && audioRef.current.currentTime > 0) {
-        await audiobookStorage.update(id, {
-          lastPosition: audioRef.current.currentTime,
-        });
-      }
-    }, 5000);
+    const updatedParagraphs = audiobook.paragraphs?.map((p) =>
+      p.id === paragraph.id ? { ...p, translatedText: translation } : p
+    );
 
-    return () => clearInterval(interval);
-  }, [id, audiobook]);
-
-  const togglePlayPause = () => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    if (isPlaying) {
-      audio.pause();
-    } else {
-      audio.play();
-    }
-    setIsPlaying(!isPlaying);
-  };
-
-  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    const time = parseFloat(e.target.value);
-    audio.currentTime = time;
-    setCurrentTime(time);
-  };
-
-  const seekToParagraph = (paragraph: SubtitleParagraph) => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    audio.currentTime = paragraph.startTime;
-    setCurrentTime(paragraph.startTime);
-  };
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const handleTextSelection = async () => {
-    const selection = window.getSelection();
-    const text = selection?.toString().trim();
-
-    if (text && text.length > 0) {
-      setSelectedText(text);
-      setShowTranslation(true);
-      setIsTranslating(true);
-
-      try {
-        const translated = await translationService.translateText(text, 'RU', 'EN');
-        setTranslation(translated);
-      } catch (error) {
-        console.error('translation error:', error);
-        setTranslation('Translation failed');
-      } finally {
-        setIsTranslating(false);
-      }
+    if (updatedParagraphs) {
+      await audiobookStorage.update(id, {
+        paragraphs: updatedParagraphs,
+      });
     }
   };
 
@@ -167,122 +129,80 @@ export default function PlayerPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 pb-32">
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <button
-          onClick={() => navigate('/')}
-          className="mb-4 text-blue-500 hover:text-blue-700 flex items-center"
-        >
-          ← Back
-        </button>
-
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <h1 className="text-3xl font-bold mb-2">{audiobook.title}</h1>
+    <div className="min-h-screen bg-gray-100 pb-40">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-30">
+        <div className="container mx-auto px-4 py-4">
+          <button
+            onClick={() => navigate('/')}
+            className="text-blue-600 hover:text-blue-700 flex items-center gap-1 mb-2"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="w-5 h-5"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M15.75 19.5L8.25 12l7.5-7.5"
+              />
+            </svg>
+            Back
+          </button>
+          <h1 className="text-2xl font-bold text-gray-900">{audiobook.title}</h1>
           {audiobook.author && (
-            <p className="text-gray-600 mb-4">{audiobook.author}</p>
+            <p className="text-sm text-gray-600">{audiobook.author}</p>
           )}
-
-          {audiobook.thumbnailUrl && (
-            <img
-              src={audiobook.thumbnailUrl}
-              alt={audiobook.title}
-              className="w-full max-w-md rounded mb-6 mx-auto"
-            />
-          )}
-
-          {/* Audio Element */}
-          {(audiobook.audioUri || audiobook.youtubeUrl) && (
-            <audio
-              ref={audioRef}
-              src={audiobook.audioUri || `https://www.youtube.com/watch?v=${audiobook.youtubeUrl?.split('v=')[1]}`}
-              onPlay={() => setIsPlaying(true)}
-              onPause={() => setIsPlaying(false)}
-            />
-          )}
-
-          {/* Player Controls */}
-          <div className="bg-gray-50 rounded-lg p-4">
-            <div className="flex items-center gap-4 mb-4">
-              <button
-                onClick={togglePlayPause}
-                className="bg-blue-500 text-white w-12 h-12 rounded-full flex items-center justify-center hover:bg-blue-600"
-              >
-                {isPlaying ? '⏸' : '▶'}
-              </button>
-
-              <div className="flex-1">
-                <input
-                  type="range"
-                  min="0"
-                  max={duration || 0}
-                  value={currentTime}
-                  onChange={handleSeek}
-                  className="w-full"
-                />
-                <div className="flex justify-between text-sm text-gray-600 mt-1">
-                  <span>{formatTime(currentTime)}</span>
-                  <span>{formatTime(duration)}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Subtitles */}
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <h2 className="text-xl font-semibold mb-4">Subtitles</h2>
-          <div className="space-y-4" onMouseUp={handleTextSelection}>
-            {audiobook.paragraphs?.map((paragraph, index) => (
-              <div
-                key={index}
-                onClick={() => seekToParagraph(paragraph)}
-                className={`border-l-4 pl-4 py-2 cursor-pointer transition-colors ${
-                  index === activeParagraphIndex
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-300 hover:border-blue-300 hover:bg-gray-50'
-                }`}
-              >
-                <p className="text-gray-800 select-text">{paragraph.text}</p>
-                <span className="text-xs text-gray-500">
-                  {formatTime(paragraph.startTime)} - {formatTime(paragraph.endTime)}
-                </span>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
 
-      {/* Translation Popup */}
-      {showTranslation && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
-             onClick={() => setShowTranslation(false)}>
-          <div className="bg-white rounded-lg p-6 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-start mb-4">
-              <h3 className="text-lg font-semibold">Translation</h3>
-              <button
-                onClick={() => setShowTranslation(false)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="mb-4">
-              <p className="text-sm text-gray-600 mb-2">Original:</p>
-              <p className="text-gray-900">{selectedText}</p>
-            </div>
-
-            <div>
-              <p className="text-sm text-gray-600 mb-2">Translation:</p>
-              {isTranslating ? (
-                <p className="text-gray-500">Translating...</p>
-              ) : (
-                <p className="text-gray-900">{translation}</p>
-              )}
-            </div>
+      {/* Subtitles - Full width */}
+      {audiobook.paragraphs && audiobook.paragraphs.length > 0 ? (
+        <div className="container mx-auto px-4 py-6">
+          <SubtitleParagraphList
+            paragraphs={audiobook.paragraphs}
+            currentParagraphIndex={activeParagraphIndex}
+            currentTime={currentTime}
+            onSeek={seekToTime}
+            onTranslate={handleParagraphTranslate}
+          />
+        </div>
+      ) : (
+        <div className="container mx-auto px-4 py-6">
+          <div className="bg-white rounded-lg shadow-sm p-8 text-center text-gray-500">
+            <p>No subtitles available</p>
+            <p className="text-sm mt-2">
+              Upload an SRT file when adding an audiobook to see synchronized
+              subtitles
+            </p>
           </div>
         </div>
       )}
+
+      {/* Audio Player - Fixed at bottom */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-40">
+        <div className="container mx-auto px-4 py-2">
+          <AudioPlayer
+            ref={playerRef}
+            src={
+              audiobook.audioUri ||
+              (audiobook.youtubeUrl
+                ? `https://www.youtube.com/watch?v=${audiobook.youtubeUrl.split('v=')[1]}`
+                : '')
+            }
+            onListen={handleListen}
+            showSkipControls={false}
+            showJumpControls={true}
+            progressJumpSteps={{ backward: 10000, forward: 10000 }}
+            customAdditionalControls={[]}
+            layout="horizontal"
+          />
+        </div>
+      </div>
     </div>
   );
 }

@@ -13,7 +13,9 @@
     "@audiolearn/shared": "*",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "react-router-dom": "^7.9.4"
+    "react-h5-audio-player": "^3.10.1",
+    "react-router-dom": "^7.9.4",
+    "srt-parser-2": "^1.2.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",

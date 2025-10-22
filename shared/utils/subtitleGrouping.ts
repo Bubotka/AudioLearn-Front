@@ -1,34 +1,73 @@
 import type { Subtitle, SubtitleParagraph } from '../types/audiobook';
 
-const PAUSE_THRESHOLD = 1.5; // seconds
+interface GroupingOptions {
+  maxPauseSeconds?: number;
+  maxParagraphLength?: number;
+  minSubtitlesPerParagraph?: number;
+}
 
-export function groupSubtitlesIntoParagraphs(subtitles: Subtitle[]): SubtitleParagraph[] {
+const DEFAULT_OPTIONS = {
+  maxPauseSeconds: 1,
+  maxParagraphLength: 250,
+  minSubtitlesPerParagraph: 2,
+};
+
+export function groupSubtitlesIntoParagraphs(
+  subtitles: Subtitle[],
+  options?: GroupingOptions
+): SubtitleParagraph[] {
   if (!subtitles || subtitles.length === 0) {
     return [];
   }
 
+  const opts = { ...DEFAULT_OPTIONS, ...options };
+
   const paragraphs: SubtitleParagraph[] = [];
-  let currentParagraph: Subtitle[] = [];
+  let currentGroup: Subtitle[] = [];
+  let currentText = '';
 
   for (let i = 0; i < subtitles.length; i++) {
-    const current = subtitles[i];
-    const next = subtitles[i + 1];
+    const subtitle = subtitles[i];
+    const nextSubtitle = subtitles[i + 1];
 
-    currentParagraph.push(current);
+    currentGroup.push(subtitle);
+    currentText += (currentText ? ' ' : '') + subtitle.text;
 
-    const shouldBreak =
-      !next || (next.start - current.end > PAUSE_THRESHOLD);
+    const pauseToNext = nextSubtitle
+      ? nextSubtitle.start - subtitle.end
+      : 0;
 
-    if (shouldBreak) {
+    const shouldEndParagraph =
+      !nextSubtitle ||
+      pauseToNext > opts.maxPauseSeconds ||
+      currentText.length > opts.maxParagraphLength;
+
+    if (shouldEndParagraph && currentGroup.length >= opts.minSubtitlesPerParagraph) {
       paragraphs.push({
+        id: `paragraph-${paragraphs.length}`,
         paragraphIndex: paragraphs.length,
-        subtitles: currentParagraph,
-        text: currentParagraph.map((s) => s.text).join(' '),
-        startTime: currentParagraph[0].start,
-        endTime: currentParagraph[currentParagraph.length - 1].end,
+        startTime: currentGroup[0].start,
+        endTime: currentGroup[currentGroup.length - 1].end,
+        text: currentText,
+        subtitles: [...currentGroup],
       });
-      currentParagraph = [];
+
+      currentGroup = [];
+      currentText = '';
+    } else if (shouldEndParagraph && nextSubtitle) {
+      continue;
     }
+  }
+
+  if (currentGroup.length > 0) {
+    paragraphs.push({
+      id: `paragraph-${paragraphs.length}`,
+      paragraphIndex: paragraphs.length,
+      startTime: currentGroup[0].start,
+      endTime: currentGroup[currentGroup.length - 1].end,
+      text: currentText,
+      subtitles: [...currentGroup],
+    });
   }
 
   return paragraphs;
