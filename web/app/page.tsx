@@ -3,55 +3,17 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAudiobooks } from '@/hooks/useAudiobooks';
-import type { Audiobook, Subtitle } from '@audiolearn/shared';
-import { youtubeService, groupSubtitlesIntoParagraphs } from '@audiolearn/shared';
+import type { Audiobook, Subtitle, SubtitleParagraph } from '@audiolearn/shared';
+import { groupSubtitlesIntoParagraphs } from '@audiolearn/shared';
 import srtParser2 from 'srt-parser-2';
 
 export default function HomePage() {
   const router = useRouter();
   const { audiobooks, loading, addAudiobook, deleteAudiobook } = useAudiobooks();
   const [showModal, setShowModal] = useState(false);
-  const [uploadType, setUploadType] = useState<'youtube' | 'file'>('youtube');
-  const [youtubeUrl, setYoutubeUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [srtFile, setSrtFile] = useState<File | null>(null);
-
-  const handleAddFromYoutube = async () => {
-    if (!youtubeUrl.trim()) return;
-
-    try {
-      setIsLoading(true);
-
-      const metadata = await youtubeService.getMetadata(youtubeUrl);
-      const subtitles = await youtubeService.getSubtitles(youtubeUrl, 'en');
-      const paragraphs = groupSubtitlesIntoParagraphs(subtitles, {
-        maxParagraphLength: 500,
-      });
-
-      const newBook: Audiobook = {
-        id: Date.now().toString(),
-        title: metadata.title,
-        author: metadata.author,
-        youtubeUrl,
-        thumbnailUrl: metadata.thumbnailUrl,
-        subtitles,
-        paragraphs,
-        duration: metadata.duration,
-        status: 'ready',
-        createdAt: Date.now(),
-      };
-
-      await addAudiobook(newBook);
-      setShowModal(false);
-      setYoutubeUrl('');
-    } catch (error) {
-      console.error('failed to add audiobook:', error);
-      alert('Failed to add audiobook');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleFileUpload = async () => {
     if (!audioFile) {
@@ -65,7 +27,7 @@ export default function HomePage() {
       const audioUrl = URL.createObjectURL(audioFile);
 
       let subtitles: Subtitle[] = [];
-      let paragraphs: any[] = [];
+      let paragraphs: SubtitleParagraph[] = [];
 
       if (srtFile) {
         const srtText = await srtFile.text();
@@ -142,7 +104,7 @@ export default function HomePage() {
       {audiobooks.length === 0 ? (
         <div className="text-center text-gray-500 mt-20">
           <p className="text-xl">No audiobooks yet</p>
-          <p className="mt-2">Add your first audiobook from YouTube!</p>
+          <p className="mt-2">Add your first audiobook by uploading a file!</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -191,119 +153,62 @@ export default function HomePage() {
           <div className="bg-white rounded-lg p-6 max-w-md w-full">
             <h2 className="text-2xl font-bold mb-4">Add Audiobook</h2>
 
-            <div className="flex gap-2 mb-4">
-              <button
-                onClick={() => setUploadType('youtube')}
-                className={`flex-1 px-4 py-2 rounded ${
-                  uploadType === 'youtube'
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-200 text-gray-700'
-                }`}
-              >
-                YouTube
-              </button>
-              <button
-                onClick={() => setUploadType('file')}
-                className={`flex-1 px-4 py-2 rounded ${
-                  uploadType === 'file'
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-200 text-gray-700'
-                }`}
-              >
-                Upload File
-              </button>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Audio File (required)
+              </label>
+              <input
+                type="file"
+                accept="audio/*"
+                onChange={(e) => setAudioFile(e.target.files?.[0] || null)}
+                disabled={isLoading}
+                className="w-full border border-gray-300 rounded px-4 py-2"
+              />
+              {audioFile && (
+                <p className="text-sm text-green-600 mt-1">
+                  Selected: {audioFile.name}
+                </p>
+              )}
             </div>
 
-            {uploadType === 'youtube' ? (
-              <>
-                <input
-                  type="text"
-                  value={youtubeUrl}
-                  onChange={(e) => setYoutubeUrl(e.target.value)}
-                  placeholder="https://youtube.com/watch?v=..."
-                  className="w-full border border-gray-300 rounded px-4 py-2 mb-4"
-                  disabled={isLoading}
-                />
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleAddFromYoutube}
-                    disabled={isLoading}
-                    className="flex-1 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:bg-gray-400"
-                  >
-                    {isLoading ? 'Adding...' : 'Add'}
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowModal(false);
-                      setYoutubeUrl('');
-                    }}
-                    disabled={isLoading}
-                    className="flex-1 bg-gray-300 px-4 py-2 rounded hover:bg-gray-400 disabled:bg-gray-200"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Audio File (required)
-                  </label>
-                  <input
-                    type="file"
-                    accept="audio/*"
-                    onChange={(e) => setAudioFile(e.target.files?.[0] || null)}
-                    disabled={isLoading}
-                    className="w-full border border-gray-300 rounded px-4 py-2"
-                  />
-                  {audioFile && (
-                    <p className="text-sm text-green-600 mt-1">
-                      Selected: {audioFile.name}
-                    </p>
-                  )}
-                </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Subtitle File (optional)
+              </label>
+              <input
+                type="file"
+                accept=".srt"
+                onChange={(e) => setSrtFile(e.target.files?.[0] || null)}
+                disabled={isLoading}
+                className="w-full border border-gray-300 rounded px-4 py-2"
+              />
+              {srtFile && (
+                <p className="text-sm text-green-600 mt-1">
+                  Selected: {srtFile.name}
+                </p>
+              )}
+            </div>
 
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Subtitle File (optional)
-                  </label>
-                  <input
-                    type="file"
-                    accept=".srt"
-                    onChange={(e) => setSrtFile(e.target.files?.[0] || null)}
-                    disabled={isLoading}
-                    className="w-full border border-gray-300 rounded px-4 py-2"
-                  />
-                  {srtFile && (
-                    <p className="text-sm text-green-600 mt-1">
-                      Selected: {srtFile.name}
-                    </p>
-                  )}
-                </div>
-
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleFileUpload}
-                    disabled={isLoading || !audioFile}
-                    className="flex-1 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:bg-gray-400"
-                  >
-                    {isLoading ? 'Uploading...' : 'Upload'}
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowModal(false);
-                      setAudioFile(null);
-                      setSrtFile(null);
-                    }}
-                    disabled={isLoading}
-                    className="flex-1 bg-gray-300 px-4 py-2 rounded hover:bg-gray-400 disabled:bg-gray-200"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </>
-            )}
+            <div className="flex gap-2">
+              <button
+                onClick={handleFileUpload}
+                disabled={isLoading || !audioFile}
+                className="flex-1 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:bg-gray-400"
+              >
+                {isLoading ? 'Uploading...' : 'Upload'}
+              </button>
+              <button
+                onClick={() => {
+                  setShowModal(false);
+                  setAudioFile(null);
+                  setSrtFile(null);
+                }}
+                disabled={isLoading}
+                className="flex-1 bg-gray-300 px-4 py-2 rounded hover:bg-gray-400 disabled:bg-gray-200"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}

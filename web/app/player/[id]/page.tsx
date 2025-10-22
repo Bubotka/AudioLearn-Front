@@ -20,6 +20,7 @@ export default function PlayerPage() {
   const [activeParagraphIndex, setActiveParagraphIndex] = useState(-1);
   const lastParagraphIndex = useRef(-1);
   const paragraphsRef = useRef<SubtitleParagraph[]>([]);
+  const paragraphIndexMap = useRef<Map<string, number>>(new Map());
 
   useEffect(() => {
     const loadAudiobook = async () => {
@@ -30,6 +31,15 @@ export default function PlayerPage() {
 
         if (book?.paragraphs) {
           paragraphsRef.current = book.paragraphs;
+
+          // Create index map for fast O(1) paragraph lookup
+          const indexMap = new Map<string, number>();
+          book.paragraphs.forEach((p, index) => {
+            if (p.id) {
+              indexMap.set(p.id, index);
+            }
+          });
+          paragraphIndexMap.current = indexMap;
         }
       } catch (error) {
         console.error('failed to load audiobook:', error);
@@ -93,17 +103,25 @@ export default function PlayerPage() {
     paragraph: SubtitleParagraph,
     translation: string
   ) => {
-    if (!id || !audiobook) return;
+    if (!id || !audiobook || !audiobook.paragraphs) return;
 
-    const updatedParagraphs = audiobook.paragraphs?.map((p) =>
-      p.id === paragraph.id ? { ...p, translatedText: translation } : p
-    );
+    // Fast O(1) lookup instead of slow O(n) map()
+    const paragraphId = paragraph.id;
+    if (!paragraphId) return;
 
-    if (updatedParagraphs) {
-      await audiobookStorage.update(id, {
-        paragraphs: updatedParagraphs,
-      });
-    }
+    const index = paragraphIndexMap.current.get(paragraphId);
+    if (index === undefined) return;
+
+    // Create new array with updated paragraph
+    const updatedParagraphs = [...audiobook.paragraphs];
+    updatedParagraphs[index] = {
+      ...updatedParagraphs[index],
+      translatedText: translation,
+    };
+
+    await audiobookStorage.update(id, {
+      paragraphs: updatedParagraphs,
+    });
   };
 
   if (loading) {
@@ -185,12 +203,7 @@ export default function PlayerPage() {
         <div className="container mx-auto px-4 py-2">
           <AudioPlayer
             ref={playerRef}
-            src={
-              audiobook.audioUri ||
-              (audiobook.youtubeUrl
-                ? `https://www.youtube.com/watch?v=${audiobook.youtubeUrl.split('v=')[1]}`
-                : '')
-            }
+            src={audiobook.audioUri || ''}
             onListen={handleListen}
             showSkipControls={false}
             showJumpControls={true}
