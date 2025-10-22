@@ -36,6 +36,11 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
+# Next.js
+/.next/
+/out/
+next-env.d.ts
+
 # Native build artifacts (but keep source code)
 /mobile/android/build
 /mobile/android/app/build

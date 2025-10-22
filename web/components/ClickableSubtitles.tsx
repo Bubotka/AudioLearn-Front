@@ -130,26 +130,31 @@ export function ClickableSubtitles({
       <span onMouseUp={handleTextSelection}>
         {subtitles.map((sub, index) => {
           const words = sub.text.split(/(\s+)/); // Split by spaces but keep them
-          return words.map((word, wordIndex) => {
-            // If it's just whitespace, render it as is
-            if (/^\s+$/.test(word)) {
-              return <span key={`${index}-${wordIndex}`}>{word}</span>;
-            }
+          return (
+            <>
+              {words.map((word, wordIndex) => {
+                // If it's just whitespace, render it as is
+                if (/^\s+$/.test(word)) {
+                  return <span key={`${index}-${wordIndex}`}>{word}</span>;
+                }
 
-            return (
-              <span
-                key={`${index}-${wordIndex}`}
-                onClick={(e) => handleWordClick(word, e)}
-                className={`cursor-pointer transition-all ${
-                  index === activeSubIndex
-                    ? 'text-gray-900 underline font-medium'
-                    : 'text-gray-600'
-                } hover:text-blue-600`}
-              >
-                {word}
-              </span>
-            );
-          });
+                return (
+                  <span
+                    key={`${index}-${wordIndex}`}
+                    onClick={(e) => handleWordClick(word, e)}
+                    className={`cursor-pointer transition-all ${
+                      index === activeSubIndex
+                        ? 'text-gray-900 underline font-medium'
+                        : 'text-gray-600'
+                    } hover:text-blue-600`}
+                  >
+                    {word}
+                  </span>
+                );
+              })}
+              {index < subtitles.length - 1 && ' '}
+            </>
+          );
         })}
       </span>
 
