@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useServices } from '@/contexts/ServicesContext';
 import { useAudiobooks } from '@/hooks/useAudiobooks';
 import type { Audiobook, Subtitle, SubtitleParagraph } from '@audiolearn/shared';
 import { groupSubtitlesIntoParagraphs } from '@audiolearn/shared';
@@ -9,11 +10,26 @@ import srtParser2 from 'srt-parser-2';
 
 export default function HomePage() {
   const router = useRouter();
+  const { auth } = useServices();
   const { audiobooks, loading, addAudiobook, deleteAudiobook } = useAudiobooks();
+  const [authLoading, setAuthLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [srtFile, setSrtFile] = useState<File | null>(null);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { session } = await auth.getSession();
+      if (!session) {
+        router.push('/auth/sign-in');
+        return;
+      }
+      setAuthLoading(false);
+    };
+
+    checkAuth();
+  }, [auth, router]);
 
   const handleFileUpload = async () => {
     if (!audioFile) {
@@ -68,7 +84,7 @@ export default function HomePage() {
     }
   };
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-xl">Loading...</div>
@@ -81,6 +97,21 @@ export default function HomePage() {
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">AudioLearn</h1>
         <div className="flex gap-2">
+          <button
+            onClick={() => router.push('/profile')}
+            className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 text-sm"
+          >
+            Profile
+          </button>
+          <button
+            onClick={async () => {
+              await auth.signOut();
+              router.push('/auth/sign-in');
+            }}
+            className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 text-sm"
+          >
+            Sign Out
+          </button>
           <button
             onClick={() => {
               if (confirm('Clear all audiobooks from storage?')) {

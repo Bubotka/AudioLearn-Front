@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
 import type { Subtitle } from '@audiolearn/shared';
-import { translationService } from '@audiolearn/shared';
+import { useServices } from '@/contexts/ServicesContext';
 
 interface ClickableSubtitlesProps {
   subtitles: Subtitle[];
@@ -13,6 +13,7 @@ export function ClickableSubtitles({
   isActive,
   currentTime,
 }: ClickableSubtitlesProps) {
+  const { translation: translationService } = useServices();
   const lastSubIndex = useRef(-1);
   const [activeSubIndex, setActiveSubIndex] = useState(-1);
   const [selectedWord, setSelectedWord] = useState('');
@@ -78,7 +79,8 @@ export function ClickableSubtitles({
       const translated = await translationService.translateText(
         cleanWord,
         'RU',
-        'EN'
+        'EN',
+        'word'
       );
       setTranslation(translated);
     } catch (error) {
@@ -115,7 +117,12 @@ export function ClickableSubtitles({
     setTranslation('');
 
     try {
-      const translated = await translationService.translateText(text, 'RU', 'EN');
+      const translated = await translationService.translateText(
+        text,
+        'RU',
+        'EN',
+        'word'
+      );
       setTranslation(translated);
     } catch (error) {
       console.error('translation error:', error);

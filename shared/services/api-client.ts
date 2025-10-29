@@ -1,12 +1,30 @@
-import { supabase } from '../config/supabase';
+import type { TranslateRequest, TranslateResponse } from '../types/translation';
+import type { UserProfile } from '../types/user';
+import type {
+  SubscriptionPlan,
+  Subscription,
+  CreateSubscriptionRequest,
+  CreateSubscriptionResponse,
+} from '../types/subscription';
+
+interface ISupabaseClient {
+  auth: {
+    getSession(): Promise<{
+      data: { session: { access_token: string } | null };
+    }>;
+  };
+}
 
 export class ApiClient {
-  constructor(private baseUrl: string) {}
+  constructor(
+    private baseUrl: string,
+    private supabase: ISupabaseClient
+  ) {}
 
   private async getAuthHeaders(): Promise<Record<string, string>> {
     const {
       data: { session },
-    } = await supabase.auth.getSession();
+    } = await this.supabase.auth.getSession();
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -65,29 +83,29 @@ export class ApiClient {
     return response.json();
   }
   
-  async getUserProfile() {
-    return this.get('/api/auth/me');
+  async getUserProfile(): Promise<UserProfile> {
+    return this.get<UserProfile>('/api/auth/me');
   }
 
-  async getSubscriptionPlans() {
-    return this.get('/api/v1/subscriptions/plans');
+  async getSubscriptionPlans(): Promise<SubscriptionPlan[]> {
+    return this.get<SubscriptionPlan[]>('/api/v1/subscriptions/plans');
   }
 
-  async getUserSubscription() {
-    return this.get('/api/v1/subscriptions/me');
+  async getUserSubscription(): Promise<Subscription | null> {
+    return this.get<Subscription | null>('/api/v1/subscriptions/me');
   }
 
-  async createSubscription(data: unknown) {
-    return this.post('/api/v1/subscriptions', data);
+  async createSubscription(
+    data: CreateSubscriptionRequest
+  ): Promise<CreateSubscriptionResponse> {
+    return this.post<CreateSubscriptionResponse>('/api/v1/subscriptions', data);
   }
 
-  async cancelSubscription() {
-    return this.delete('/api/v1/subscriptions/me');
+  async cancelSubscription(): Promise<void> {
+    return this.delete<void>('/api/v1/subscriptions/me');
   }
 
-  async translate(data: unknown) {
+  async translate(data: TranslateRequest): Promise<TranslateResponse> {
     return this.post('/api/translate', data);
   }
 }
-
-export const apiClient = new ApiClient('http://localhost:8080');

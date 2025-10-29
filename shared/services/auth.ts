@@ -1,9 +1,11 @@
-import { supabase } from '../config/supabase';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import type { AuthResponse } from '../types/auth';
 
-export const authService = {
+export class AuthService {
+  constructor(private supabase: SupabaseClient) {}
+
   async signUp(email: string, password: string): Promise<AuthResponse> {
-    const { data, error } = await supabase.auth.signUp({
+    const { data, error } = await this.supabase.auth.signUp({
       email,
       password,
     });
@@ -25,10 +27,10 @@ export const authService = {
         : null,
       error: error ? { message: error.message, status: error.status } : null,
     };
-  },
+  }
 
   async signIn(email: string, password: string): Promise<AuthResponse> {
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await this.supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -50,17 +52,17 @@ export const authService = {
         : null,
       error: error ? { message: error.message, status: error.status } : null,
     };
-  },
+  }
 
   async signOut(): Promise<{ error: AuthResponse['error'] }> {
-    const { error } = await supabase.auth.signOut();
+    const { error } = await this.supabase.auth.signOut();
     return {
       error: error ? { message: error.message, status: error.status } : null,
     };
-  },
+  }
 
   async getSession(): Promise<{ session: AuthResponse['session']; error: AuthResponse['error'] }> {
-    const { data, error } = await supabase.auth.getSession();
+    const { data, error } = await this.supabase.auth.getSession();
 
     return {
       session: data.session
@@ -76,10 +78,10 @@ export const authService = {
         : null,
       error: error ? { message: error.message, status: error.status } : null,
     };
-  },
+  }
 
   onAuthStateChange(callback: (session: AuthResponse['session']) => void) {
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data } = this.supabase.auth.onAuthStateChange((_event, session) => {
       callback(
         session
           ? {
@@ -96,5 +98,5 @@ export const authService = {
     });
 
     return data.subscription;
-  },
-};
+  }
+}

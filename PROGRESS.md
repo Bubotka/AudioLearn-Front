@@ -400,9 +400,41 @@ Mobile app will redirect to web for payment:
 - [x] Database schema (Supabase)
 - [x] Lava payment integration
 - [x] API documentation (API.md)
+- [x] **Phase 1: Supabase & Auth Infrastructure (Shared)** - DONE
+  - Created `shared/config/supabase.ts` with factory function
+  - Created `shared/services/auth.ts` with DI pattern
+  - Created `shared/services/api-client.ts` with JWT auto-inject
+  - Created `shared/types/auth.ts`, `user.ts`, `subscription.ts`, `translation.ts`
+- [x] **Phase 2: Core Services (Shared)** - DONE
+  - Created `shared/services/user.ts` with getUserProfile()
+  - Created `shared/services/subscription.ts` with full CRUD
+  - Updated `shared/services/translation.ts` with type parameter
+  - Created `shared/services/factory.ts` for DI (Go-style architecture)
+- [x] **Phase 3: Web Auth UI** - DONE
+  - Created `web/app/auth/sign-in/page.tsx`
+  - Created `web/app/auth/sign-up/page.tsx` with email confirmation
+  - Created `web/contexts/ServicesContext.tsx` for dependency injection
+  - Created `web/app/providers.tsx` for service initialization
+  - Protected routes: redirect to sign-in if not authenticated
+  - Auto-redirect from auth pages if already logged in
+- [x] **Phase 4.1: Profile Page** - DONE
+  - Created `web/app/profile/page.tsx`
+  - Shows user email, plan (FREE/PREMIUM), usage stats
+  - Shows subscription details if exists (status, dates)
+  - "Back to Home" and "Upgrade to Premium" buttons
+  - Added "Profile" link to home page header
 
 ### 🔄 In Progress:
-- [ ] Frontend integration (Phase 1-7)
+- [ ] **Phase 4.2: Subscription Plans Page**
+  - Need to create `/plans` page
+  - Display available plans (Free vs Premium)
+  - Feature comparison table
+  - Subscribe button → create subscription → redirect to Lava
+- [ ] Phase 4.3: Subscription Success Page
+- [ ] Phase 4.4: Paywall Modal
+- [ ] Phase 5: State Management (already using Context, might skip)
+- [ ] Phase 6: Protected Routes & Error Handling
+- [ ] Phase 7: Testing & Polish
 
 ### 🔮 Planned:
 - [ ] Mobile payment redirect (Phase 8)
@@ -413,16 +445,17 @@ Mobile app will redirect to web for payment:
 
 ## 🚀 Next Steps
 
-**Current Priority:** Phase 1 - Supabase & Auth Infrastructure
+**Current Priority:** Phase 4.2 - Subscription Plans Page
 
-Start with:
-1. Install @supabase/supabase-js in shared workspace
-2. Create shared/config/supabase.ts
-3. Create shared/services/auth.ts
-4. Create shared/services/api-client.ts
-5. Test authentication flow
+Next session tasks:
+1. Create `web/app/plans/page.tsx`
+2. Fetch plans from API: `subscriptionService.getPlans()`
+3. Display plan cards (Free vs Premium)
+4. Feature comparison table
+5. Subscribe button → `subscriptionService.createSubscription()` → redirect to Lava payment URL
+6. Handle payment redirect & success page
 
-**After Phase 1:** Move to Phase 2 (Core Services)
+**After Phase 4.2:** Create subscription success page with status polling
 
 ---
 

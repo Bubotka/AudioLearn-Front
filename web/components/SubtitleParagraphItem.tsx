@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { SubtitleParagraph } from '@audiolearn/shared';
-import { translationService } from '@audiolearn/shared';
+import { useServices } from '@/contexts/ServicesContext';
 import { ClickableSubtitles } from './ClickableSubtitles';
 
 interface SubtitleParagraphItemProps {
@@ -18,6 +18,7 @@ export function SubtitleParagraphItem({
   onPlay,
   onTranslate,
 }: SubtitleParagraphItemProps) {
+  const { translation } = useServices();
   const [showTranslation, setShowTranslation] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
 
@@ -32,13 +33,14 @@ export function SubtitleParagraphItem({
       setShowTranslation(!showTranslation);
       return;
     }
-
+    
     setIsTranslating(true);
     try {
-      const translated = await translationService.translateText(
+      const translated = await translation.translateText(
         paragraph.text,
         'RU',
-        'EN'
+        'EN',
+        'paragraph'
       );
       paragraph.translatedText = translated;
       setShowTranslation(true);
